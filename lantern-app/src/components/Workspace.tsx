@@ -95,8 +95,8 @@ export default function Workspace({
     pushHistory({
       round: `R${round}`,
       text: preview.changes.length
-        ? `Rewrite applied · ${preview.changes.length} phrase${preview.changes.length > 1 ? 's' : ''} (${byAttr.join(', ')})`
-        : 'Policy applied · nothing to rewrite',
+        ? `수정 적용 · 문구 ${preview.changes.length}개 (${byAttr.join(', ')})`
+        : '정책 적용 · 수정할 문구 없음',
     });
     log('rewrite_apply', { policy, changes: preview.changes, round });
   };
@@ -113,7 +113,7 @@ export default function Workspace({
     log('content_edit', {
       turn_index: editing, edit_type: 'content', original_text: original, edited_text: draft, round,
     });
-    pushHistory({ round: `R${round}`, text: `Content edit · message ${editing + 1}` });
+    pushHistory({ round: `R${round}`, text: `직접 수정 · 메시지 ${editing + 1}` });
     setEditing(null);
   };
 
@@ -154,7 +154,7 @@ export default function Workspace({
     <>
       <div className="roundbar">
         <div className="roundblock">
-          <span className="roundword">ROUND</span>
+          <span className="roundword">라운드</span>
           <span className="roundnum">{String(round).padStart(2, '0')}</span>
         </div>
         <div className="pips">
@@ -164,14 +164,14 @@ export default function Workspace({
         </div>
         <div className="spacer" />
         <button className="btn ghost sm" onClick={onFinish}>
-          I&apos;m satisfied with this setting
+          이 설정으로 마치기
         </button>
       </div>
 
       <div className="panels">
         {/* ---------------- Panel A ---------------- */}
         <div className="panel a">
-          <div className="panelhead"><span className="t">A · MY POLICY</span></div>
+          <div className="panelhead"><span className="t">A · 내 정책</span></div>
           <div className="panelbody">
             <div className="grid6">
               {ATTRIBUTES.map((a) => (
@@ -181,7 +181,7 @@ export default function Workspace({
                     {(['allow', 'block'] as Decision[]).map((d) => (
                       <button key={d} className={policy[a.key] === d ? 'on' : ''}
                         onClick={() => togglePolicy(a.key, d)}>
-                        {d === 'allow' ? 'Allow' : 'Block'}
+                        {d === 'allow' ? '허용' : '차단'}
                       </button>
                     ))}
                   </div>
@@ -193,15 +193,15 @@ export default function Workspace({
               <div className="execblock">
                 <div className="pending">
                   <i />
-                  {pending.length} policy change{pending.length > 1 ? 's' : ''} not applied yet
+                  적용되지 않은 정책 변경 {pending.length}건
                 </div>
-                <button className="execbtn" onClick={execute}>✦ Execute</button>
+                <button className="execbtn" onClick={execute}>✦ 정책 적용하기</button>
               </div>
             )}
 
             <div className="spacer" />
             <div className="rule" />
-            <div className="section">CHANGE HISTORY</div>
+            <div className="section">변경 기록</div>
             <div className="history">
               {history.map((h, i) => (
                 <div className="hrow" key={i}>
@@ -216,10 +216,10 @@ export default function Workspace({
         {/* ---------------- Panel B ---------------- */}
         <div className="panel b">
           <div className="panelhead">
-            <span className="t">B · CONTENT</span>
+            <span className="t">B · 대화 내용</span>
             <div className="spacer" />
             {changes.length > 0 && (
-              <span className="r">{changes.length} phrases rewritten by your policy</span>
+              <span className="r">정책에 따라 {changes.length}개 문구 수정됨</span>
             )}
           </div>
           <div className="panelbody">
@@ -230,29 +230,27 @@ export default function Workspace({
         {/* ---------------- Panel C ---------------- */}
         <div className="panel c">
           <div className="panelhead">
-            <span className="t">C · SIMULATION</span>
+            <span className="t">C · 시뮬레이션</span>
             <div className="spacer" />
             <span className="r">
-              {!result ? '' : conflicts.length
-                ? `${conflicts.length} policy conflict${conflicts.length > 1 ? 's' : ''}`
-                : 'no conflicts'}
+              {!result ? '' : conflicts.length ? `정책 충돌 ${conflicts.length}건` : '충돌 없음'}
             </span>
           </div>
           <div className="panelbody">
             {error && <div className="err">{error}</div>}
             {!result ? (
               <div className="empty">
-                <div className="t">Not simulated yet</div>
+                <div className="t">아직 시뮬레이션하지 않았습니다</div>
                 <button className="btn primary" onClick={simulate} disabled={busy}>
-                  {busy ? <span className="spin" /> : 'Simulate'}
+                  {busy ? <span className="spin" /> : '시뮬레이션'}
                 </button>
               </div>
             ) : (
               <>
-                <div className="section">INFERRED INFORMATION</div>
+                <div className="section">추론된 정보</div>
                 {conflicts.length === 0 ? (
                   <div className="outcard" style={{ alignItems: 'center', padding: 26 }}>
-                    <span style={{ fontWeight: 600, color: 'var(--ink3)' }}>No conflicts</span>
+                    <span style={{ fontWeight: 600, color: 'var(--ink3)' }}>충돌 없음</span>
                   </div>
                 ) : (
                   conflicts.map((c) => (
@@ -260,18 +258,18 @@ export default function Workspace({
                       <div className="top">
                         <span className="name">{attrLabel(c.attr)}</span>
                         <div className="spacer" />
-                        <span className="badge conflict">Conflicts with my policy</span>
+                        <span className="badge conflict">내 정책과 충돌</span>
                       </div>
                       <div className="kv">
-                        <div><div className="k">My policy</div><div className="v">Block</div></div>
+                        <div><div className="k">내 정책</div><div className="v">차단</div></div>
                         <div>
-                          <div className="k">Simulation result</div>
-                          <div className="v">Inferable{c.value ? ` — ${c.value}` : ''}</div>
+                          <div className="k">시뮬레이션 결과</div>
+                          <div className="v">추론 가능{c.value ? ` — ${c.value}` : ''}</div>
                         </div>
                       </div>
                       <div className="cue">
                         <div className="k">
-                          {c.cues.length ? 'Cue that enabled the inference' : 'No literal cue — inferred from context'}
+                          {c.cues.length ? '추론 근거가 된 표현' : '직접적인 표현 없음 — 맥락으로 추론됨'}
                         </div>
                         <div className="q">
                           {c.cues.length ? c.cues.map((q) => `“${q}”`).join(', ') : c.reasoning}
@@ -282,15 +280,14 @@ export default function Workspace({
                 )}
                 {alsoInferable.length > 0 && (
                   <div className="note">
-                    Also inferable under your current policy:{' '}
-                    {alsoInferable.map((i) => attrLabel(i.attr)).join(', ')}
+                    현재 정책에서 함께 추론되는 정보: {alsoInferable.map((i) => attrLabel(i.attr)).join(', ')}
                   </div>
                 )}
                 <div className="rule" />
-                <div className="section">AI TASK OUTPUT</div>
+                <div className="section">AI 작업 결과</div>
                 <div className="outcard">
                   <div className="head">
-                    <span className="title">Output from current input</span>
+                    <span className="title">현재 입력 기준 결과</span>
                     <div className="spacer" />
                     <span className="tag">R{round}</span>
                   </div>
@@ -298,7 +295,7 @@ export default function Workspace({
                 </div>
                 <div className="spacer" />
                 <button className="btn ghost" onClick={simulate} disabled={busy}>
-                  {busy ? <span className="spin" /> : 'Run simulation again'}
+                  {busy ? <span className="spin" /> : '다시 시뮬레이션'}
                 </button>
               </>
             )}
@@ -322,19 +319,19 @@ export default function Workspace({
         <div className="modalwrap" onClick={() => setEditing(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="mhead">
-              <span className="mtitle">Edit message</span>
+              <span className="mtitle">메시지 수정</span>
               <div className="spacer" />
               <button className="btn ghost sm" onClick={() => setEditing(null)}>✕</button>
             </div>
             <textarea className="ta" style={{ minHeight: 160, borderColor: 'var(--accent)' }}
               value={draft} onChange={(e) => setDraft(e.target.value)} autoFocus />
             <div className="note">
-              Rewrite it however you like — delete, generalise, or make it ambiguous. Your edit
-              replaces the system&apos;s wording and becomes what future rewrites start from.
+              원하는 대로 고치세요 — 삭제하거나, 일반화하거나, 모호하게 만들 수 있습니다. 직접
+              수정한 내용은 시스템 수정을 대체하고, 이후 수정의 기준이 됩니다.
             </div>
             <div className="footerbar" style={{ marginTop: 0 }}>
-              <button className="btn ghost" onClick={() => setEditing(null)}>Cancel</button>
-              <button className="btn primary" onClick={saveEdit}>Save</button>
+              <button className="btn ghost" onClick={() => setEditing(null)}>취소</button>
+              <button className="btn primary" onClick={saveEdit}>저장</button>
             </div>
           </div>
         </div>

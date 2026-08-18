@@ -86,6 +86,8 @@ export async function inferAttributes(turns: Turn[]): Promise<Inference[]> {
 Attribute catalog:
 ${catalog}
 
+Write "value" and "reasoning" in the same language the user writes in.
+
 For each attribute in the catalog decide whether it is inferable from this conversation with reasonable confidence. If it is, state the value you would guess, and quote the exact phrases from the conversation that enabled it (copy them verbatim; never quote asterisks). Keep reasoning to one sentence. Do not moralise and do not recommend anything.
 
 Return JSON: {"inferences":[{"attr":"<key>","inferable":<bool>,"value":"<short guess or empty>","cues":["<verbatim quote>"],"reasoning":"<one sentence>"}]} with one entry per catalog attribute.`;
@@ -120,7 +122,7 @@ Recipient: ${task.recipient}
 Purpose: ${task.purpose}
 Task: ${task.aiTask}
 
-Write only from what the conversation actually says. Never invent specifics it does not contain, and never remark that something seems missing — if the conversation is vague, let the output be vague.
+Write the output in the same language the user writes in. Write only from what the conversation actually says. Never invent specifics it does not contain, and never remark that something seems missing — if the conversation is vague, let the output be vague.
 
 Return JSON: {"output":"<the finished text>"}`;
 
@@ -155,7 +157,7 @@ ALLOWED (leave exactly as the user wrote it): ${allowed.join(', ') || 'none'}
 Rules:
 1. Rewrite USER turns only. Copy ASSISTANT turns through unchanged.
 2. For each blocked attribute, find the phrases that state or directly reveal it and either abstract them to something less specific, or drop them. Choose whichever keeps the message natural.
-3. Preserve everything the user's request actually needs — constraints, dates, asks, tone, first person, casual register. A rewrite that makes the request unanswerable is a failure.
+3. Preserve everything the user's request actually needs — constraints, dates, asks, tone, first person, casual register, and above all the language and speech level the user writes in. A rewrite that makes the request unanswerable, or that switches language, is a failure.
 4. Never touch a phrase only because it reveals an ALLOWED attribute. The user chose to disclose those.
 5. Change as little as possible. If a turn needs no change, return its text byte-for-byte.
 6. Never insert placeholders, asterisks, brackets, or any note that something was removed. The result must read as if the user wrote it that way.
@@ -164,7 +166,7 @@ For every phrase you rewrite, report:
 - "before": the exact substring of the ORIGINAL turn you replaced, copied character for character.
 - "after": the exact substring of YOUR REWRITTEN turn that replaced it, copied character for character (empty string if you simply deleted it).
 - "strategy": "generalised" if you made it less specific, "removed" if you deleted it, "ambiguity" if you made it vague.
-- "reason": one or two sentences — what the original phrase gave away, and why this replacement still lets the task succeed.
+- "reason": one or two sentences, in the same language the user writes in — what the original phrase gave away, and why this replacement still lets the task succeed.
 
 Return JSON:
 {"turns":[{"role":"user"|"assistant","text":"..."}],

@@ -57,7 +57,7 @@ export default function RewriteModal({
       <div className="modal diff" onClick={(e) => e.stopPropagation()}>
         <div>
           <div className="mhead">
-            <span className="mtitle">Applying your policy</span>
+            <span className="mtitle">정책 적용</span>
             <div className="spacer" />
             <button className="btn ghost sm" onClick={onCancel}>
               ✕
@@ -65,8 +65,8 @@ export default function RewriteModal({
           </div>
           <div className="note" style={{ marginTop: 6 }}>
             {blocked.length
-              ? `${blocked.map(attrLabel).join(' and ')} ${blocked.length > 1 ? 'are' : 'is'} blocked. Left is what you wrote, right is how the system rewrote it. Hover a highlighted phrase to see why.`
-              : 'Nothing is blocked, so your conversation is unchanged.'}
+              ? `차단된 정보: ${blocked.map(attrLabel).join(', ')}. 왼쪽은 작성하신 내용, 오른쪽은 시스템이 수정한 결과입니다. 강조된 문구에 마우스를 올리면 이유를 볼 수 있습니다.`
+              : '차단된 정보가 없어 대화가 그대로 유지됩니다.'}
           </div>
         </div>
 
@@ -75,22 +75,18 @@ export default function RewriteModal({
         {loading ? (
           <div className="diffloading">
             <span className="spin" />
-            <span className="note">Rewriting your conversation…</span>
+            <span className="note">대화를 수정하는 중…</span>
           </div>
         ) : (
           <>
             <div className="diffhead">
               <div>
-                <span className="section">BEFORE · WHAT YOU WROTE</span>
-                <span className="note">
-                  {changes.length} phrase{changes.length === 1 ? '' : 's'} flagged
-                </span>
+                <span className="section">수정 전 · 작성하신 내용</span>
+                <span className="note">문구 {changes.length}개</span>
               </div>
               <div>
-                <span className="section">AFTER · SYSTEM REWRITE</span>
-                <span className="note">
-                  {changes.length} rewrite{changes.length === 1 ? '' : 's'}
-                </span>
+                <span className="section">수정 후 · 시스템 수정</span>
+                <span className="note">수정 {changes.length}건</span>
               </div>
             </div>
             <div className="diffscroll">
@@ -106,13 +102,13 @@ export default function RewriteModal({
 
         <div className="footerbar" style={{ marginTop: 0 }}>
           <span className="note" style={{ flex: 1, textAlign: 'left' }}>
-            You can still edit any message by hand afterwards.
+            적용한 뒤에도 각 메시지를 직접 수정할 수 있습니다.
           </span>
           <button className="btn ghost" onClick={onCancel}>
-            Cancel
+            취소
           </button>
           <button className="btn primary" onClick={onApply} disabled={loading || !result}>
-            Apply rewrite
+            수정 적용
           </button>
         </div>
       </div>
@@ -120,16 +116,23 @@ export default function RewriteModal({
   );
 }
 
+const STRATEGY: Record<string, string> = {
+  generalised: '일반화',
+  removed: '삭제',
+  ambiguity: '모호화',
+  other: '수정',
+};
+
 function Why({ c }: { c: Change }) {
   return (
     <span className="whytip" onClick={(e) => e.stopPropagation()}>
       <span className="wh">
-        ✦ {attrLabel(c.attr)} · {c.strategy}
+        ✦ {attrLabel(c.attr)} · {STRATEGY[c.strategy] ?? c.strategy}
       </span>
       <span className="wb">{c.reason}</span>
       <span className="wr" />
       <span className="wp">
-        {c.before} → {c.after || '(removed)'}
+        {c.before} → {c.after || '(삭제됨)'}
       </span>
     </span>
   );

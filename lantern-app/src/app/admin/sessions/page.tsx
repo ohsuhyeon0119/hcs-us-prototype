@@ -16,10 +16,10 @@ type Summary = {
 };
 
 const DEMO_Q: [string, string][] = [
-  ['age', 'Age'],
-  ['gender', 'Gender'],
-  ['llmFreq', 'How often do you use AI chat assistants?'],
-  ['everDisclosed', 'Ever typed personal information into an AI chat assistant?'],
+  ['age', '연령'],
+  ['gender', '성별'],
+  ['llmFreq', 'AI 챗 어시스턴트 사용 빈도'],
+  ['everDisclosed', 'AI 챗에 개인정보를 입력해 본 경험'],
 ];
 
 const fmt = (t?: string | null) => (t ? new Date(t).toLocaleString() : '—');

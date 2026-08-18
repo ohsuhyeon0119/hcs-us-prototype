@@ -7,17 +7,17 @@ import type { Policy, Scenario, Turn } from '@/lib/types';
 type Step = 'demographics' | 'scenario' | 'workspace' | 'reflection' | 'done';
 type HistoryEntry = { round: string; text: string };
 
-const AGE = ['19–24', '25–29', '30–34', '35–39', '40+', 'Prefer not to say'];
-const GENDER = ['Woman', 'Man', 'Non-binary', 'Prefer to self-describe', 'Prefer not to say'];
-const LLM_FREQ = ['Daily', 'A few times a week', 'A few times a month', 'Rarely or never'];
-const YNU = ['Yes', 'No', 'Not sure'];
+const AGE = ['19–24세', '25–29세', '30–34세', '35–39세', '40세 이상', '응답하지 않음'];
+const GENDER = ['여성', '남성', '논바이너리', '직접 기술', '응답하지 않음'];
+const LLM_FREQ = ['매일', '주 몇 회', '월 몇 회', '거의 사용하지 않음'];
+const YNU = ['예', '아니오', '잘 모르겠음'];
 const STOP_REASONS = [
-  'The information I wanted protected is protected enough',
-  'The AI output is useful enough',
-  'This feels like the right balance between privacy and usefulness',
-  'Revising further would not change much',
-  'Revising is too much trouble',
-  'Other',
+  '원하는 정보가 충분히 보호되었다',
+  'AI 결과가 충분히 유용하다',
+  '프라이버시와 유용성 사이에서 적절한 수준이라고 생각한다',
+  '더 수정해도 크게 달라지지 않을 것 같다',
+  '수정하는 것이 번거롭다',
+  '기타',
 ];
 
 export default function Study({ scenarios }: { scenarios: Scenario[] }) {
@@ -69,10 +69,10 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
     return (
       <Shell>
         <div className="card">
-          <h1 className="title">No scenarios registered yet</h1>
+          <h1 className="title">등록된 시나리오가 없습니다</h1>
           <p className="note">
-            Add at least one scenario in the <a className="link" href="/admin">admin page</a> before
-            running a session.
+            세션을 시작하려면 <a className="link" href="/admin">어드민 페이지</a>에서 시나리오를 먼저
+            등록해 주세요.
           </p>
         </div>
       </Shell>
@@ -82,19 +82,19 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
     return (
       <Shell>
         <div className="card">
-          <div className="eyebrow">PARTICIPANT {pid}</div>
-          <h1 className="title">About you</h1>
+          <div className="eyebrow">참가자 {pid}</div>
+          <h1 className="title">기본 정보</h1>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-            <Choice label="Age" options={AGE} value={demo.age} onChange={(v) => setDemo({ ...demo, age: v })} />
-            <Choice label="Gender" options={GENDER} value={demo.gender} onChange={(v) => setDemo({ ...demo, gender: v })} />
+            <Choice label="연령" options={AGE} value={demo.age} onChange={(v) => setDemo({ ...demo, age: v })} />
+            <Choice label="성별" options={GENDER} value={demo.gender} onChange={(v) => setDemo({ ...demo, gender: v })} />
             <Choice
-              label="How often do you use AI chat assistants?"
+              label="AI 챗 어시스턴트를 얼마나 자주 사용하시나요?"
               options={LLM_FREQ}
               value={demo.llmFreq}
               onChange={(v) => setDemo({ ...demo, llmFreq: v })}
             />
             <Choice
-              label="Have you ever typed personal information about yourself into an AI chat assistant?"
+              label="AI 챗 어시스턴트에 본인의 개인정보를 입력해 본 적이 있나요?"
               options={YNU}
               value={demo.everDisclosed}
               onChange={(v) => setDemo({ ...demo, everDisclosed: v })}
@@ -109,7 +109,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
                 startScenario(0);
               }}
             >
-              Continue
+              계속하기
             </button>
           </div>
         </div>
@@ -121,21 +121,21 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
       <Shell>
         <div className="card">
           <div className="eyebrow">
-            SCENARIO {si + 1} / {scenarios.length}
+            시나리오 {si + 1} / {scenarios.length}
           </div>
           <h1 className="title">{scenario.title}</h1>
           <div className="rule" />
           <div className="dl">
             <div className="row">
-              <div className="k">Recipient</div>
+              <div className="k">받는 사람</div>
               <div className="v">{scenario.recipient}</div>
             </div>
             <div className="row">
-              <div className="k">Purpose</div>
+              <div className="k">목적</div>
               <div className="v">{scenario.purpose}</div>
             </div>
             <div className="row">
-              <div className="k">AI Task</div>
+              <div className="k">AI가 할 일</div>
               <div className="v">{scenario.aiTask}</div>
             </div>
           </div>
@@ -145,12 +145,12 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
               onClick={() => {
                 const init = Object.fromEntries(ATTR_KEYS.map((k) => [k, 'allow'])) as Policy;
                 setPolicy(init);
-                setHistory([{ round: 'INIT', text: 'All attributes allow' }]);
+                setHistory([{ round: 'INIT', text: '전체 허용' }]);
                 log('initial_policy', { policy: init, source: 'default' });
                 setStep('workspace');
               }}
             >
-              Continue
+              계속하기
             </button>
           </div>
         </div>
@@ -180,9 +180,9 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
       <Shell pid={pid}>
         <div className="card">
           <div className="eyebrow">
-            REFLECTION · SCENARIO {si + 1} / {scenarios.length}
+            회고 · 시나리오 {si + 1} / {scenarios.length}
           </div>
-          <h2 className="title">Why did you decide to stop revising here?</h2>
+          <h2 className="title">왜 여기에서 더 이상 수정하지 않기로 했나요?</h2>
           <div className="grid6">
             {STOP_REASONS.map((r) => (
               <label className={`opt ${stopReason === r ? 'on' : ''}`} key={r}>
@@ -198,13 +198,13 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
           </div>
           <div className="rule" />
           <div style={{ fontWeight: 600, marginBottom: 10 }}>
-            Briefly explain why you chose your current setting.
+            현재 기준을 선택한 이유를 간단하게 설명해 주세요.
           </div>
           <textarea
             className="ta"
             value={stopText}
             onChange={(e) => setStopText(e.target.value)}
-            placeholder="Type your answer here."
+            placeholder="자유롭게 적어 주세요."
           />
           <div className="footerbar">
             <button
@@ -223,7 +223,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
                 }
               }}
             >
-              {si + 1 < scenarios.length ? 'Next scenario' : 'Finish'}
+              {si + 1 < scenarios.length ? '다음 시나리오로' : '마치기'}
             </button>
           </div>
         </div>
@@ -233,10 +233,10 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
   return (
     <Shell pid={pid}>
       <div className="card">
-        <h1 className="title">Thank you — the session is complete.</h1>
+        <h1 className="title">감사합니다 — 세션이 끝났습니다.</h1>
         <p className="note">
-          Participant ID <b>{pid}</b>. Every revision event was written to{' '}
-          <code>data/sessions/{pid}.jsonl</code>.
+          참가자 ID <b>{pid}</b>. 모든 수정 이벤트가{' '}
+          <code>data/sessions/{pid}.jsonl</code> 에 기록되었습니다.
         </p>
       </div>
     </Shell>

@@ -33,7 +33,7 @@ export default function Chat({
                 s.change === undefined ? (
                   <span key={j}>{s.text}</span>
                 ) : (
-                  <span className="hl after" key={j} title="rewritten to satisfy your policy">
+                  <span className="hl after" key={j} title="정책에 따라 수정된 문구">
                     {s.text}
                   </span>
                 ),

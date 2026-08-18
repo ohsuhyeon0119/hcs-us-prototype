@@ -8,14 +8,14 @@ export default function Home() {
       </div>
       <div className="centerwrap">
         <div className="card">
-          <div className="eyebrow">FORMATIVE STUDY · STRAW-MAN PROTOTYPE</div>
+          <div className="eyebrow">FORMATIVE STUDY · 프로토타입</div>
           <h1 className="title">
-            A sandbox where you inspect what an AI can infer, revise your policy or your words, and
-            see what it costs.
+            AI가 내 대화에서 무엇을 알아낼 수 있는지 확인하고, 정책이나 문장을 직접 고쳐 보면서
+            그 대가가 무엇인지 살펴보는 공간입니다.
           </h1>
           <div className="footerbar">
             <a className="btn primary" href="/study">
-              Start a session
+              시작하기
             </a>
           </div>
         </div>

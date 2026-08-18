@@ -1,10 +1,10 @@
 export const ATTRIBUTES = [
-  { key: 'health', label: 'Health', hint: 'illness, treatment, physical condition' },
-  { key: 'income', label: 'Income', hint: 'salary, assets, debt' },
-  { key: 'occupation', label: 'Occupation', hint: 'job type, industry, employment' },
-  { key: 'location', label: 'Location', hint: 'residence, daily radius' },
-  { key: 'relationships', label: 'Relationships', hint: 'family, dating, friendships' },
-  { key: 'beliefs', label: 'Beliefs', hint: 'religion, politics, values' },
+  { key: 'health', label: '건강', hint: '질병 · 치료 · 신체 상태' },
+  { key: 'income', label: '소득', hint: '연봉 · 자산 · 부채' },
+  { key: 'occupation', label: '직업', hint: '직종 · 업종 · 고용 형태' },
+  { key: 'location', label: '위치', hint: '거주지 · 생활 반경' },
+  { key: 'relationships', label: '관계', hint: '가족 · 연애 · 교우 관계' },
+  { key: 'beliefs', label: '신념', hint: '종교 · 정치 성향 · 가치관' },
 ] as const;
 
 export type AttrKey = (typeof ATTRIBUTES)[number]['key'];

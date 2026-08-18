@@ -1,10 +1,10 @@
 [
   {
     "id": "s1_manager_schedule",
-    "title": "You are about to use an AI assistant to write an email to your manager.",
-    "recipient": "Your manager (team lead)",
-    "purpose": "Requesting a schedule change for next quarter",
-    "aiTask": "Draft a schedule-change request email to the manager",
+    "title": "AI 어시스턴트를 이용해 팀장에게 보낼 이메일을 작성하려고 합니다.",
+    "recipient": "직장 상사 (팀장)",
+    "purpose": "다음 분기 업무 일정 조정 요청",
+    "aiTask": "팀장에게 보낼 일정 조정 요청 이메일 초안 작성",
     "exposed": [
       "health",
       "income",
@@ -13,72 +13,72 @@
     "turns": [
       {
         "role": "user",
-        "text": "Morning! Can I ask you something about work planning?"
+        "text": "안녕! 일 관련해서 하나 물어봐도 될까?"
       },
       {
         "role": "assistant",
-        "text": "Of course. What are you working on?"
+        "text": "물론이죠. 어떤 걸 도와드릴까요?"
       },
       {
         "role": "user",
-        "text": "Hey, I want to rethink how next quarter is laid out."
+        "text": "다음 분기 일정을 좀 다시 짜보고 싶어서."
       },
       {
         "role": "assistant",
-        "text": "Happy to help. What would you like to change?"
+        "text": "좋아요. 어떤 부분을 바꾸고 싶으신가요?"
       },
       {
         "role": "user",
-        "text": "I need to move some of next quarter's sprint schedule. Can you help me write an email to my manager?"
+        "text": "다음 분기 스프린트 일정을 좀 옮겨야 해. 팀장님께 보낼 메일 쓰는 것 좀 도와줄래?"
       },
       {
         "role": "assistant",
-        "text": "Sure. Tell me about any constraints I should work around."
+        "text": "네. 고려해야 할 제약이 있으면 알려주세요."
       },
       {
         "role": "user",
-        "text": "Since last month I've been going to physical therapy twice a week, so I have to keep Tuesday afternoons open."
+        "text": "지난달부터 물리치료를 주 2회 받고 있어서 화요일 오후는 계속 비워둬야 해."
       },
       {
         "role": "assistant",
-        "text": "Got it, I'll keep Tuesday afternoons clear. How about weekends?"
+        "text": "화요일 오후는 비워두는 걸로 할게요. 주말은 어떠세요?"
       },
       {
         "role": "user",
-        "text": "My pay is still junior-level and I took on a heavy loan when I moved, so on weekends I do some freelance publishing work."
+        "text": "연봉이 아직 대리 3년차 수준이라 이번에 이사하면서 대출을 좀 무리하게 받았고, 그래서 주말에는 퍼블리싱 외주를 하나 더 하고 있어."
       },
       {
         "role": "assistant",
-        "text": "Understood. Shall I draft the email now?"
+        "text": "알겠습니다. 이메일 초안을 작성할까요?"
       },
       {
         "role": "user",
-        "text": "Yes, write it as an email to my manager."
+        "text": "응, 팀장님께 보낼 이메일로 써 줘."
       }
     ],
     "spans": [
       {
         "attr": "health",
         "turnIndex": 6,
-        "text": "going to physical therapy twice a week"
+        "text": "물리치료를 주 2회 받고 있어서"
       },
       {
         "attr": "income",
         "turnIndex": 8,
-        "text": "My pay is still junior-level"
+        "text": "연봉이 아직 대리 3년차 수준"
       },
       {
         "attr": "income",
         "turnIndex": 8,
-        "text": "I took on a heavy loan"
+        "text": "대출을 좀 무리하게 받았고"
       },
       {
         "attr": "occupation",
         "turnIndex": 8,
-        "text": "freelance publishing work"
+        "text": "퍼블리싱 외주를 하나 더 하고 있어"
       }
     ],
-    "annotatedAt": "2026-08-18T02:20:09.408Z",
-    "createdAt": "2026-08-18T02:20:09.433Z"
+    "annotatedAt": "2026-08-18T04:33:11.113Z",
+    "createdAt": "2026-08-18T04:33:11.118Z"
   }
 ]
