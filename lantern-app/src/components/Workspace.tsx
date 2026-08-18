@@ -145,12 +145,8 @@ export default function Workspace({
     }
   };
 
-  // Everything the simulator could work out, conflicts first.
-  const inferred: Inference[] = (result?.inferences.filter((i) => i.inferable) ?? []).sort(
-    (a, b) =>
-      Number(appliedPolicy[b.attr] === 'block') - Number(appliedPolicy[a.attr] === 'block'),
-  );
-  const conflicts = inferred.filter((i) => appliedPolicy[i.attr] === 'block');
+  // Everything the simulator could work out, in catalogue order.
+  const inferred: Inference[] = result?.inferences.filter((i) => i.inferable) ?? [];
 
   return (
     <>
@@ -235,11 +231,7 @@ export default function Workspace({
             <span className="t">C · 시뮬레이션</span>
             <div className="spacer" />
             <span className="r">
-              {!result
-                ? ''
-                : conflicts.length
-                  ? `추론 ${inferred.length}개 · 충돌 ${conflicts.length}건`
-                  : `추론 ${inferred.length}개`}
+              {result ? `추론 ${inferred.length}개` : ''}
             </span>
           </div>
           <div className="panelbody">
@@ -259,38 +251,22 @@ export default function Workspace({
                     <span style={{ fontWeight: 600, color: 'var(--ink3)' }}>추론된 정보 없음</span>
                   </div>
                 ) : (
-                  inferred.map((c) => {
-                    const blockedAttr = appliedPolicy[c.attr] === 'block';
-                    return (
-                      <div className={`infcard ${blockedAttr ? 'conflict' : ''}`} key={c.attr}>
-                        <div className="top">
-                          <span className="name">{attrLabel(c.attr)}</span>
-                          <div className="spacer" />
-                          <span className={`badge ${blockedAttr ? 'conflict' : ''}`}>
-                            {blockedAttr ? '내 정책과 충돌' : '내가 허용함'}
-                          </span>
+                  inferred.map((c) => (
+                    <div className="infcard" key={c.attr}>
+                      <div className="top">
+                        <span className="name">{attrLabel(c.attr)}</span>
+                      </div>
+                      {c.value && <div className="infval">{c.value}</div>}
+                      <div className="cue">
+                        <div className="k">
+                          {c.cues.length ? '추론 근거가 된 표현' : '직접적인 표현 없음 — 맥락으로 추론됨'}
                         </div>
-                        <div className="kv">
-                          <div>
-                            <div className="k">내 정책</div>
-                            <div className="v">{blockedAttr ? '차단' : '허용'}</div>
-                          </div>
-                          <div>
-                            <div className="k">시뮬레이션 결과</div>
-                            <div className="v">추론 가능{c.value ? ` — ${c.value}` : ''}</div>
-                          </div>
-                        </div>
-                        <div className="cue">
-                          <div className="k">
-                            {c.cues.length ? '추론 근거가 된 표현' : '직접적인 표현 없음 — 맥락으로 추론됨'}
-                          </div>
-                          <div className="q">
-                            {c.cues.length ? c.cues.map((q) => `“${q}”`).join(', ') : c.reasoning}
-                          </div>
+                        <div className="q">
+                          {c.cues.length ? c.cues.map((q) => `“${q}”`).join(', ') : c.reasoning}
                         </div>
                       </div>
-                    );
-                  })
+                    </div>
+                  ))
                 )}
                 <div className="rule" />
                 <div className="section">AI 작업 결과</div>
