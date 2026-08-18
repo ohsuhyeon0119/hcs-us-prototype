@@ -130,10 +130,6 @@ function Why({ c }: { c: Change }) {
         ✦ {attrLabel(c.attr)} · {STRATEGY[c.strategy] ?? c.strategy}
       </span>
       <span className="wb">{c.reason}</span>
-      <span className="wr" />
-      <span className="wp">
-        {c.before} → {c.after || '(삭제됨)'}
-      </span>
     </span>
   );
 }
