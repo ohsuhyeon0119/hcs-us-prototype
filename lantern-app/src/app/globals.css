@@ -169,3 +169,14 @@ table.admin th{font-size:11px;letter-spacing:.6px;color:var(--ink3);text-transfo
   font-family:var(--font);font-weight:400;white-space:normal;cursor:default}
 .whytip .wh{display:block;font-size:12px;font-weight:700;color:#fff;text-transform:capitalize}
 .whytip .wb{display:block;font-size:12.5px;line-height:1.65;color:#C3CAD6;margin-top:8px}
+
+/* ---------- admin action chips ---------- */
+.actchip{display:inline-block;font-size:11px;font-weight:600;padding:3px 8px;border-radius:5px;
+  background:var(--chip);color:var(--ink2);white-space:nowrap}
+.actchip.act-policy{background:#EDE6FB;color:#5B3FA8}
+.actchip.act-accent{background:var(--accent-soft);color:var(--accent)}
+.actchip.act-ink{background:var(--ink);color:#fff}
+.actchip.act-sim{background:var(--ok-soft);color:var(--ok)}
+.actchip.act-err{background:var(--conflict-soft);color:var(--conflict)}
+.actchip.act-muted{background:var(--sunken);color:var(--ink3)}
+table.admin td{vertical-align:top}

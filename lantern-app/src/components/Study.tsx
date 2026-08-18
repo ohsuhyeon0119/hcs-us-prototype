@@ -1,7 +1,8 @@
 'use client';
-import { useCallback, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import Workspace from './Workspace';
-import { ATTR_KEYS } from '@/lib/types';
+import { ATTR_KEYS, attrLabel } from '@/lib/types';
+import { createLogger } from '@/lib/logger';
 import type { Policy, Scenario, Turn } from '@/lib/types';
 
 type Step = 'demographics' | 'scenario' | 'workspace' | 'reflection' | 'done';
@@ -35,25 +36,16 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
 
   const scenario = scenarios[si];
 
-  const log = useCallback(
-    (type: string, payload: Record<string, unknown>) => {
-      return fetch('/api/log', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          participantId: pid,
-          scenarioId: scenarios[si]?.id,
-          ts: new Date().toISOString(),
-          type,
-          payload,
-        }),
-      });
-    },
-    [pid, si, scenarios],
-  );
+  const logger = useMemo(() => createLogger(pid), [pid]);
+  const started = useRef(false);
+  if (!started.current) {
+    started.current = true;
+    logger.log('session_start', '세션 시작', { scenario_count: scenarios.length });
+  }
 
   const startScenario = (index: number) => {
     const s = scenarios[index];
+    logger.setContext({ scenarioId: s.id, scenarioIndex: index, round: 0 });
     setPolicy(Object.fromEntries(ATTR_KEYS.map((k) => [k, 'allow'])) as Policy);
     setTurns(s.turns);
     setHistory([]);
@@ -105,7 +97,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
               className="btn primary"
               disabled={Object.keys(demo).length < 4}
               onClick={() => {
-                log('demographics', demo);
+                logger.log('demographics_submit', '기본 정보 설문 제출', { answers: demo });
                 startScenario(0);
               }}
             >
@@ -146,7 +138,14 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
                 const init = Object.fromEntries(ATTR_KEYS.map((k) => [k, 'allow'])) as Policy;
                 setPolicy(init);
                 setHistory([{ round: 'INIT', text: '전체 허용' }]);
-                log('initial_policy', { policy: init, source: 'default' });
+                logger.log('scenario_start', `시나리오 ${si + 1} 시작 · 초기 정책 전체 허용`, {
+                  scenario_title: scenario.title,
+                  recipient: scenario.recipient,
+                  purpose: scenario.purpose,
+                  ai_task: scenario.aiTask,
+                  initial_policy: init,
+                  initial_turns: scenario.turns,
+                });
                 setStep('workspace');
               }}
             >
@@ -169,8 +168,11 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
           setTurns={setTurns}
           history={history}
           pushHistory={(e) => setHistory((h) => [...h, e])}
-          log={log}
-          onFinish={() => setStep('reflection')}
+          logger={logger}
+          onFinish={() => {
+            logger.log('finish_click', '이 설정으로 마치기 클릭', { policy });
+            setStep('reflection');
+          }}
         />
       </>
     );
@@ -211,14 +213,19 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
               className="btn primary"
               disabled={!stopReason}
               onClick={async () => {
-                await log('reflection', {
+                await logger.log('reflection_submit', `회고 제출 · ${stopReason}`, {
                   stop_reason: stopReason,
                   explanation: stopText,
                   final_policy: policy,
+                  final_policy_readable: ATTR_KEYS.map(
+                    (k) => `${attrLabel(k)} ${policy[k] === 'block' ? '차단' : '허용'}`,
+                  ).join(' · '),
+                  final_turns: turns,
                 });
+                await logger.log('scenario_end', `시나리오 ${si + 1} 종료`, {});
                 if (si + 1 < scenarios.length) startScenario(si + 1);
                 else {
-                  await log('session_end', {});
+                  await logger.log('session_end', '세션 종료', {});
                   setStep('done');
                 }
               }}

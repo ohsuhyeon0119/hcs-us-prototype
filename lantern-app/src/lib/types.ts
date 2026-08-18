@@ -64,22 +64,36 @@ export type SimulationResult = {
   ranAt: string;
 };
 
+export type ActionType =
+  | 'session_start'
+  | 'demographics_submit'
+  | 'scenario_start'
+  | 'policy_toggle'
+  | 'execute_click'
+  | 'rewrite_preview'
+  | 'rewrite_apply'
+  | 'rewrite_cancel'
+  | 'content_edit_open'
+  | 'content_edit_save'
+  | 'content_edit_cancel'
+  | 'simulate_click'
+  | 'simulate_result'
+  | 'simulate_error'
+  | 'finish_click'
+  | 'reflection_submit'
+  | 'scenario_end'
+  | 'session_end';
+
+/** One interaction. `label` reads as a sentence; `detail` carries what changed. */
 export type LogEvent = {
   participantId: string;
-  scenarioId?: string;
+  /** Monotonic within a session, so ordering survives clock skew. */
+  seq: number;
   ts: string;
-  type:
-    | 'session_start'
-    | 'demographics'
-    | 'baseline'
-    | 'initial_policy'
-    | 'policy_edit'
-    | 'rewrite_preview'
-    | 'rewrite_apply'
-    | 'rewrite_cancel'
-    | 'content_edit'
-    | 'simulate'
-    | 'reflection'
-    | 'session_end';
-  payload: Record<string, unknown>;
+  scenarioId?: string;
+  scenarioIndex?: number;
+  round: number;
+  action: ActionType;
+  label: string;
+  detail: Record<string, unknown>;
 };

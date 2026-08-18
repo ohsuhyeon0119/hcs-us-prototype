@@ -57,6 +57,22 @@ explicitly; it no longer drives the participant UI.
 ## Data
 
 - `data/scenarios.json` — scenario registry (edit via `/admin`).
-- `data/sessions/<participantId>.jsonl` — one JSON object per event. Revision events carry
-  `target_attribute`, `direction` (tighten/loosen), `edit_type` (policy/content), `before_state`,
-  `after_state`, `round`, and `preceding_simulation`, matching spec §24.
+- `data/sessions/<participantId>.jsonl` — one JSON object per interaction:
+
+  ```jsonc
+  {
+    "participantId": "P4K2QX", "seq": 9, "ts": "...", "round": 1,
+    "scenarioId": "s1_manager_schedule", "scenarioIndex": 0,
+    "action": "rewrite_apply",
+    "label": "수정 적용 · 문구 1개 (건강)",        // reads as a sentence
+    "detail": { "policy_applied": {...}, "changes": [...], "changed_turns": [...] }
+  }
+  ```
+
+  `seq` is monotonic per session, so the history replays in order without trusting clocks.
+  Every action is recorded — `policy_toggle`, `execute_click`, `rewrite_preview`, `rewrite_apply`,
+  `rewrite_cancel`, `content_edit_open/save/cancel`, `simulate_click`, `simulate_result`,
+  `finish_click`, `reflection_submit` — each with enough detail to reconstruct the state change:
+  the policy before and after, the exact phrases rewritten and why, the text before and after an
+  edit, and the full simulation result. `/admin/sessions` renders this as a per-scenario timeline
+  and exports it as CSV.

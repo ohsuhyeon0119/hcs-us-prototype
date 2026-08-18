@@ -6,8 +6,8 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   const e = (await req.json()) as LogEvent;
-  if (!e?.participantId || !e?.type)
-    return NextResponse.json({ error: 'participantId and type required' }, { status: 400 });
+  if (!e?.participantId || !e?.action)
+    return NextResponse.json({ error: 'participantId and action required' }, { status: 400 });
   await appendLog({ ...e, ts: e.ts || new Date().toISOString() });
   return NextResponse.json({ ok: true });
 }
@@ -20,16 +20,18 @@ export async function GET(req: Request) {
   const sessions = await Promise.all(
     ids.map(async (participantId) => {
       const events = await readLog(participantId);
-      const demo = events.find((e) => e.type === 'demographics')?.payload ?? {};
+      const demo = events.find((e) => e.action === 'demographics_submit')?.detail ?? {};
       return {
         participantId,
         startedAt: events[0]?.ts ?? null,
         lastAt: events[events.length - 1]?.ts ?? null,
         eventCount: events.length,
         scenarios: [...new Set(events.map((e) => e.scenarioId).filter(Boolean))] as string[],
-        revisions: events.filter((e) => e.type === 'policy_edit' || e.type === 'content_edit').length,
-        simulations: events.filter((e) => e.type === 'simulate').length,
-        completed: events.some((e) => e.type === 'session_end'),
+        revisions: events.filter(
+          (e) => e.action === 'policy_toggle' || e.action === 'content_edit_save',
+        ).length,
+        simulations: events.filter((e) => e.action === 'simulate_result').length,
+        completed: events.some((e) => e.action === 'session_end'),
         demographics: demo as Record<string, string>,
       };
     }),
