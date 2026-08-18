@@ -1,256 +1,127 @@
-'use client';
-import { useEffect, useState } from 'react';
-import { ATTRIBUTES, attrLabel } from '@/lib/types';
-import type { AttrKey, Scenario, Span, Turn } from '@/lib/types';
+import { listScenarios } from '@/lib/store';
+import { attrLabel } from '@/lib/types';
+import type { Scenario, Span } from '@/lib/types';
 
-const BLANK = {
-  id: '',
-  title: '',
-  recipient: '',
-  purpose: '',
-  aiTask: '',
-  exposed: [] as AttrKey[],
-  transcript: '',
-  spans: [] as Span[],
-};
+export const dynamic = 'force-dynamic';
 
-function parseTranscript(src: string): Turn[] {
-  const turns: Turn[] = [];
-  let cur: Turn | null = null;
-  for (const line of src.split('\n')) {
-    const m = /^\s*(USER|AI|ASSISTANT)\s*:\s?(.*)$/i.exec(line);
-    if (m) {
-      if (cur) turns.push(cur);
-      cur = { role: /^user$/i.test(m[1]) ? 'user' : 'assistant', text: m[2] };
-    } else if (cur) {
-      cur.text += '\n' + line;
-    }
-  }
-  if (cur) turns.push(cur);
-  return turns.map((t) => ({ ...t, text: t.text.trim() })).filter((t) => t.text);
-}
+const fmt = (t?: string) => (t ? new Date(t).toLocaleString('ko-KR') : '—');
 
-const toTranscript = (turns: Turn[]) =>
-  turns.map((t) => `${t.role === 'user' ? 'USER' : 'AI'}: ${t.text}`).join('\n');
-
-export default function Admin() {
-  const [list, setList] = useState<Scenario[]>([]);
-  const [form, setForm] = useState({ ...BLANK });
-  const [busy, setBusy] = useState('');
-  const [error, setError] = useState('');
-
-  const load = async () => setList(await (await fetch('/api/scenarios')).json());
-  useEffect(() => {
-    void load();
-  }, []);
-
-  const turns = parseTranscript(form.transcript);
-
-  const annotate = async () => {
-    setBusy('annotate');
-    setError('');
-    try {
-      const r = await fetch('/api/annotate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ turns }),
-      });
-      const d = await r.json();
-      if (!r.ok) throw new Error(d.error);
-      setForm((f) => ({ ...f, spans: d.spans }));
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy('');
-    }
-  };
-
-  const save = async () => {
-    setBusy('save');
-    setError('');
-    try {
-      const r = await fetch('/api/scenarios', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          id: form.id || undefined,
-          title: form.title,
-          recipient: form.recipient,
-          purpose: form.purpose,
-          aiTask: form.aiTask,
-          exposed: form.exposed,
-          turns,
-          spans: form.spans,
-          annotatedAt: form.spans.length ? new Date().toISOString() : undefined,
-        }),
-      });
-      if (!r.ok) throw new Error((await r.json()).error);
-      setForm({ ...BLANK });
-      await load();
-    } catch (e) {
-      setError((e as Error).message);
-    } finally {
-      setBusy('');
-    }
-  };
-
-  const edit = (s: Scenario) =>
-    setForm({
-      id: s.id,
-      title: s.title,
-      recipient: s.recipient,
-      purpose: s.purpose,
-      aiTask: s.aiTask,
-      exposed: s.exposed ?? [],
-      transcript: toTranscript(s.turns),
-      spans: s.spans ?? [],
-    });
-
-  const remove = async (id: string) => {
-    if (!confirm('Delete this scenario?')) return;
-    await fetch(`/api/scenarios/${id}`, { method: 'DELETE' });
-    await load();
-  };
+export default async function ScenariosPage() {
+  const scenarios = await listScenarios();
 
   return (
     <div className="adminwrap">
-        <div className="card wide" style={{ padding: 28 }}>
-          <div className="eyebrow">REGISTERED SCENARIOS ({list.length})</div>
-          {list.length === 0 ? (
-            <p className="note">None yet. Register one below — participants run every scenario in this list, in order.</p>
-          ) : (
-            <table className="admin">
-              <thead>
-                <tr>
-                  <th>Title</th><th>Recipient</th><th>Turns</th><th>Annotated spans</th><th></th>
-                </tr>
-              </thead>
-              <tbody>
-                {list.map((s) => (
-                  <tr key={s.id}>
-                    <td>
-                      <b>{s.title}</b>
-                      <div style={{ marginTop: 4 }}>
-                        {(s.exposed ?? []).map((e) => <span className="pill" key={e}>{attrLabel(e)}</span>)}
-                      </div>
-                    </td>
-                    <td>{s.recipient}</td>
-                    <td>{s.turns.length}</td>
-                    <td>{s.spans?.length ?? 0}</td>
-                    <td style={{ whiteSpace: 'nowrap' }}>
-                      <button className="btn ghost sm" onClick={() => edit(s)}>Edit</button>{' '}
-                      <button className="btn danger sm" onClick={() => remove(s.id)}>Delete</button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+      <div className="right" style={{ maxWidth: 900, margin: '0 auto' }}>
+        <div className="block">
+          <div className="phead">
+            <div>
+              <div className="pid-lg" style={{ fontFamily: 'var(--font)', fontSize: 20 }}>
+                등록된 시나리오
+              </div>
+              <div className="note">
+                참가자는 아래 순서대로 모든 시나리오를 진행합니다. 시나리오는{' '}
+                <code className="mono">data/scenarios.json</code> 에서 관리합니다.
+              </div>
+            </div>
+          </div>
+          <div className="stats">
+            <div className="stat">
+              <div className="sn">{scenarios.length}</div>
+              <div className="sl">시나리오</div>
+            </div>
+            <div className="stat">
+              <div className="sn">{scenarios.reduce((n, s) => n + s.turns.length, 0)}</div>
+              <div className="sl">전체 대화 턴</div>
+            </div>
+            <div className="stat">
+              <div className="sn">{scenarios.reduce((n, s) => n + (s.spans?.length ?? 0), 0)}</div>
+              <div className="sl">주석된 PII 문구</div>
+            </div>
+          </div>
         </div>
 
-        <div className="card wide" style={{ padding: 28 }}>
-          <div className="eyebrow">{form.id ? `EDITING ${form.id}` : 'NEW SCENARIO'}</div>
-          {error && <div className="err" style={{ marginBottom: 16 }}>{error}</div>}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-            <Field label="Title (shown to the participant)" value={form.title} onChange={(v) => setForm({ ...form, title: v })} />
-            <div style={{ display: 'flex', gap: 16 }}>
-              <Field label="Recipient" value={form.recipient} onChange={(v) => setForm({ ...form, recipient: v })} />
-              <Field label="Purpose" value={form.purpose} onChange={(v) => setForm({ ...form, purpose: v })} />
-            </div>
-            <Field label="AI task (downstream task)" value={form.aiTask} onChange={(v) => setForm({ ...form, aiTask: v })} />
+        {scenarios.length === 0 && (
+          <div className="block empty-block">등록된 시나리오가 없습니다.</div>
+        )}
 
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>Attributes this scenario is designed to expose</div>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {ATTRIBUTES.map((a) => {
-                  const on = form.exposed.includes(a.key);
-                  return (
-                    <button
-                      key={a.key}
-                      className="btn ghost sm"
-                      style={on ? { background: 'var(--ink)', borderColor: 'var(--ink)', color: '#fff' } : undefined}
-                      onClick={() =>
-                        setForm({
-                          ...form,
-                          exposed: on ? form.exposed.filter((k) => k !== a.key) : [...form.exposed, a.key],
-                        })
-                      }
-                    >
-                      {a.label}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                Conversation — one turn per line, prefixed <code>USER:</code> or <code>AI:</code>
-              </div>
-              <textarea
-                className="ta"
-                style={{ minHeight: 260, fontFamily: 'var(--mono)', fontSize: 13 }}
-                value={form.transcript}
-                onChange={(e) => setForm({ ...form, transcript: e.target.value, spans: [] })}
-                placeholder={'USER: Hey, I want to rethink how next quarter is laid out.\nAI: Happy to help. What would you like to change?'}
-              />
-              <div className="note">{turns.length} turns parsed.</div>
-            </div>
-
-            <div>
-              <div style={{ fontWeight: 600, marginBottom: 8 }}>
-                PII spans — what Block will mask
-              </div>
-              <div style={{ display: 'flex', gap: 10, alignItems: 'center', marginBottom: 10 }}>
-                <button className="btn ghost sm" onClick={annotate} disabled={!turns.length || busy === 'annotate'}>
-                  {busy === 'annotate' ? <span className="spin" /> : 'Detect spans with the model'}
-                </button>
-                <span className="note">{form.spans.length} spans</span>
-              </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {form.spans.map((s, i) => (
-                  <div key={i} className="hrow">
-                    <span className="tag2">{attrLabel(s.attr)}</span>
-                    <span className="e">
-                      turn {s.turnIndex + 1} — “{s.text}”
-                    </span>
-                    <button
-                      className="btn ghost sm"
-                      style={{ padding: '2px 8px', fontSize: 11 }}
-                      onClick={() => setForm({ ...form, spans: form.spans.filter((_, j) => j !== i) })}
-                    >
-                      remove
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          <div className="footerbar">
-            {form.id && (
-              <button className="btn ghost" onClick={() => setForm({ ...BLANK })}>
-                Cancel
-              </button>
-            )}
-            <button
-              className="btn primary"
-              onClick={save}
-              disabled={!form.title || !form.aiTask || !turns.length || busy === 'save'}
-            >
-              {busy === 'save' ? <span className="spin" /> : form.id ? 'Save changes' : 'Register scenario'}
-            </button>
-          </div>
+        {scenarios.map((s, i) => (
+          <ScenarioCard key={s.id} s={s} index={i} />
+        ))}
       </div>
     </div>
   );
 }
 
-function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
+function ScenarioCard({ s, index }: { s: Scenario; index: number }) {
   return (
-    <div style={{ flex: 1 }}>
-      <div style={{ fontWeight: 600, marginBottom: 8 }}>{label}</div>
-      <input className="tf" value={value} onChange={(e) => onChange(e.target.value)} />
+    <div className="block">
+      <div className="scenhead">
+        <span className="idx">{index + 1}</span>
+        <div>
+          <div className="scentitle">{s.title}</div>
+          <div className="note mono">
+            {s.id} · {s.turns.length}턴 · 주석 {s.spans?.length ?? 0}개 · {fmt(s.annotatedAt)}
+          </div>
+        </div>
+      </div>
+
+      <div className="demogrid" style={{ gridTemplateColumns: '1fr', gap: 8 }}>
+        <Row k="받는 사람" v={s.recipient} />
+        <Row k="목적" v={s.purpose} />
+        <Row k="AI가 할 일" v={s.aiTask} />
+      </div>
+
+      <div className="section" style={{ margin: '20px 0 8px' }}>노출하도록 설계된 속성</div>
+      <div>
+        {(s.exposed ?? []).length === 0 ? (
+          <span className="note">지정되지 않음</span>
+        ) : (
+          s.exposed.map((k) => (
+            <span className="pill" key={k} style={{ background: 'var(--ink)', color: '#fff' }}>
+              {attrLabel(k)}
+            </span>
+          ))
+        )}
+      </div>
+
+      <div className="section" style={{ margin: '20px 0 10px' }}>대화</div>
+      <div className="scroller">
+        <div className="thread">
+          {s.turns.map((t, i) => (
+            <div className={`turn ${t.role === 'user' ? 'u' : 'a'}`} key={i}>
+              <div className={`bubble ${t.role === 'user' ? 'u' : 'a'}`}>{t.text}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="section" style={{ margin: '20px 0 10px' }}>
+        속성별 PII 문구 · 정책 차단 시 수정 대상
+      </div>
+      {(s.spans?.length ?? 0) === 0 ? (
+        <div className="note">주석된 문구가 없습니다.</div>
+      ) : (
+        <div className="spanlist">
+          {s.spans.map((sp: Span, i: number) => (
+            <div className="spanrow" key={i}>
+              <span className="pill">{attrLabel(sp.attr)}</span>
+              <span className="mono" style={{ color: 'var(--ink3)' }}>
+                턴 {sp.turnIndex + 1}
+              </span>
+              <span className="sptext">“{sp.text}”</span>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Row({ k, v }: { k: string; v: string }) {
+  return (
+    <div className="demo" style={{ display: 'flex', gap: 14, alignItems: 'baseline' }}>
+      <div className="dq" style={{ width: 80, flex: 'none' }}>{k}</div>
+      <div className="da" style={{ margin: 0, fontWeight: 500, fontSize: 14 }}>{v}</div>
     </div>
   );
 }

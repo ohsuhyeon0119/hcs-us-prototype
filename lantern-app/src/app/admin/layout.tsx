@@ -6,8 +6,8 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <div className="topbar">
         <Link className="wordmark" href="/">LANTERN</Link>
         <nav style={{ display: 'flex', gap: 6, marginLeft: 28 }}>
-          <Link className="navlink" href="/admin/scenarios">Scenarios</Link>
-          <Link className="navlink" href="/admin/sessions">Sessions</Link>
+          <Link className="navlink" href="/admin/sessions">세션</Link>
+          <Link className="navlink" href="/admin/scenarios">시나리오</Link>
         </nav>
         <div className="spacer" />
         <span className="note">Admin</span>

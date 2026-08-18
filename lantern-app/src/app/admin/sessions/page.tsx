@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { attrLabel } from '@/lib/types';
+import { ATTRIBUTES, attrLabel } from '@/lib/types';
 import type { ActionType, LogEvent } from '@/lib/types';
 
 type Summary = {
@@ -18,8 +18,8 @@ type Summary = {
 const DEMO_Q: [string, string][] = [
   ['age', '연령'],
   ['gender', '성별'],
-  ['llmFreq', 'AI 챗 어시스턴트 사용 빈도'],
-  ['everDisclosed', 'AI 챗에 개인정보를 입력해 본 경험'],
+  ['llmFreq', 'AI 챗 사용 빈도'],
+  ['everDisclosed', '개인정보 입력 경험'],
 ];
 
 const ACTION_KO: Record<ActionType, string> = {
@@ -45,10 +45,14 @@ const ACTION_KO: Record<ActionType, string> = {
 
 const TONE: Partial<Record<ActionType, string>> = {
   policy_toggle: 'act-policy',
-  rewrite_apply: 'act-accent',
+  execute_click: 'act-accent',
   rewrite_preview: 'act-accent',
+  rewrite_apply: 'act-accent',
   rewrite_cancel: 'act-muted',
+  content_edit_open: 'act-muted',
+  content_edit_cancel: 'act-muted',
   content_edit_save: 'act-ink',
+  simulate_click: 'act-sim',
   simulate_result: 'act-sim',
   simulate_error: 'act-err',
   reflection_submit: 'act-ink',
@@ -61,6 +65,7 @@ const time = (t?: string | null) => {
   return `${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 };
 const fmt = (t?: string | null) => (t ? new Date(t).toLocaleString('ko-KR') : '—');
+const dec = (v?: string) => (v === 'block' ? '차단' : v === 'allow' ? '허용' : '—');
 
 export default function Sessions() {
   const [list, setList] = useState<Summary[]>([]);
@@ -114,134 +119,196 @@ export default function Sessions() {
   return (
     <div className="adminwrap">
       <div className="split">
-        <div className="left">
-          <div className="section" style={{ padding: '4px 2px 6px' }}>세션 ({list.length})</div>
+        <aside className="left">
+          <div className="section" style={{ padding: '2px 2px 4px' }}>세션 ({list.length})</div>
           {list.length === 0 && <div className="note">아직 기록된 세션이 없습니다.</div>}
           {list.map((s) => (
             <button key={s.participantId}
               className={`sessionitem ${sel === s.participantId ? 'on' : ''}`}
               onClick={() => select(s.participantId)}>
-              <div className="pid">{s.participantId} {s.completed ? '✓' : '·'}</div>
-              <div className="meta">
-                {fmt(s.startedAt)}<br />
-                시나리오 {s.scenarios.length} · 수정 {s.revisions} · 시뮬 {s.simulations}
+              <div className="si-top">
+                <span className="pid">{s.participantId}</span>
+                <span className={`dot ${s.completed ? 'done' : ''}`} />
+              </div>
+              <div className="meta">{fmt(s.startedAt)}</div>
+              <div className="si-nums">
+                <span>시나리오 {s.scenarios.length}</span>
+                <span>수정 {s.revisions}</span>
+                <span>시뮬 {s.simulations}</span>
               </div>
             </button>
           ))}
-          <button className="btn ghost sm" onClick={load} style={{ marginTop: 6 }}>새로고침</button>
-        </div>
+          <button className="btn ghost sm" onClick={load} style={{ marginTop: 4 }}>새로고침</button>
+        </aside>
 
-        <div className="right">
+        <main className="right">
           {!sel ? (
-            <div className="block"><h3>세션 상세</h3><div className="note">왼쪽에서 참가자를 선택하세요.</div></div>
+            <div className="block empty-block">왼쪽에서 참가자를 선택하세요.</div>
           ) : loading ? (
-            <div className="block"><span className="spin" /></div>
+            <div className="block empty-block"><span className="spin" /></div>
           ) : (
             <>
+              {/* ---------- participant header ---------- */}
               <div className="block">
-                <h3>설문 응답 · {sel}</h3>
-                {Object.keys(demo).length === 0 ? (
-                  <div className="note">설문을 완료하지 않은 참가자입니다.</div>
-                ) : (
-                  DEMO_Q.map(([k, q]) => (
-                    <div className="qa" key={k}>
-                      <span className="q">{q}</span>
-                      <span className="a">{demo[k] ?? '—'}</span>
-                    </div>
-                  ))
-                )}
-                <div className="note" style={{ marginTop: 12 }}>
-                  시작 {fmt(summary?.startedAt)} · 마지막 {fmt(summary?.lastAt)} · 이벤트 {events.length}건
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 14 }}>
+                <div className="phead">
+                  <div>
+                    <div className="pid-lg">{sel}</div>
+                    <div className="note">{fmt(summary?.startedAt)} 시작 · 마지막 {fmt(summary?.lastAt)}</div>
+                  </div>
+                  <div className="spacer" />
                   <button className="btn ghost sm" onClick={downloadCsv}>전체 기록 CSV</button>
                   <a className="btn ghost sm" href={`/api/log?participantId=${sel}`} target="_blank" rel="noreferrer">원본 JSON</a>
                 </div>
+
+                <div className="stats">
+                  <Stat n={events.length} l="이벤트" />
+                  <Stat n={scenarioIds.length} l="시나리오" />
+                  <Stat n={summary?.revisions ?? 0} l="수정" />
+                  <Stat n={summary?.simulations ?? 0} l="시뮬레이션" />
+                  <Stat n={summary?.completed ? '완료' : '중단'} l="상태" />
+                </div>
+
+                <div className="section" style={{ margin: '20px 0 10px' }}>설문 응답</div>
+                {Object.keys(demo).length === 0 ? (
+                  <div className="note">설문을 완료하지 않은 참가자입니다.</div>
+                ) : (
+                  <div className="demogrid">
+                    {DEMO_Q.map(([k, q]) => (
+                      <div className="demo" key={k}>
+                        <div className="dq">{q}</div>
+                        <div className="da">{demo[k] ?? '—'}</div>
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {scenarioIds.map((sid) => {
+              {/* ---------- one block per scenario ---------- */}
+              {scenarioIds.map((sid, si) => {
                 const evs = events.filter((e) => e.scenarioId === sid);
                 const start = evs.find((e) => e.action === 'scenario_start')?.detail as any;
                 const refl = evs.find((e) => e.action === 'reflection_submit')?.detail as any;
                 const rounds = Math.max(0, ...evs.map((e) => e.round));
                 return (
                   <div className="block" key={sid}>
-                    <h3>시나리오 · {start?.scenario_title ?? sid}</h3>
-                    <div className="note" style={{ marginBottom: 14 }}>
-                      {sid} · 라운드 {rounds}회 · 인터랙션 {evs.length}건
+                    <div className="scenhead">
+                      <span className="idx">{si + 1}</span>
+                      <div>
+                        <div className="scentitle">{start?.scenario_title ?? sid}</div>
+                        <div className="note mono">{sid} · 라운드 {rounds}회 · 인터랙션 {evs.length}건</div>
+                      </div>
                     </div>
 
-                    <div style={{ display: 'flex', gap: 22, flexWrap: 'wrap', marginBottom: 18 }}>
-                      <PolicyBox title="초기 정책" policy={start?.initial_policy} />
-                      <PolicyBox title="최종 정책" policy={refl?.final_policy} />
-                    </div>
+                    <PolicyDiff initial={start?.initial_policy} final={refl?.final_policy} />
 
-                    <div className="section" style={{ marginBottom: 8 }}>인터랙션 기록</div>
-                    <table className="admin">
-                      <thead>
-                        <tr><th>#</th><th>시각</th><th>R</th><th>액션</th><th>내용</th><th /></tr>
-                      </thead>
-                      <tbody>
-                        {evs.map((e) => (
-                          <tr key={e.seq}>
-                            <td className="mono">{e.seq}</td>
-                            <td className="mono" style={{ whiteSpace: 'nowrap' }}>{time(e.ts)}</td>
-                            <td className="mono">{e.round}</td>
-                            <td><span className={`actchip ${TONE[e.action] ?? ''}`}>{ACTION_KO[e.action] ?? e.action}</span></td>
-                            <td>{e.label}</td>
-                            <td style={{ width: 60 }}>
-                              {e.detail && Object.keys(e.detail).length > 0 && (
-                                <details className="raw">
-                                  <summary className="mono" style={{ cursor: 'pointer' }}>상세</summary>
-                                  <pre>{JSON.stringify(e.detail, null, 2)}</pre>
-                                </details>
-                              )}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                    <div className="section" style={{ margin: '22px 0 12px' }}>인터랙션 기록</div>
+                    <Timeline events={evs} />
 
                     {refl && (
-                      <>
-                        <div className="section" style={{ margin: '18px 0 8px' }}>회고</div>
+                      <div className="reflbox">
+                        <div className="section" style={{ marginBottom: 10 }}>회고</div>
                         <div className="qa">
                           <span className="q">왜 여기에서 멈췄나?</span>
                           <span className="a">{refl.stop_reason}</span>
                         </div>
-                        {refl.explanation && (
-                          <div style={{ marginTop: 10, fontSize: 14, lineHeight: 1.7 }}>
-                            “{refl.explanation}”
-                          </div>
-                        )}
-                      </>
+                        {refl.explanation && <div className="quote">“{refl.explanation}”</div>}
+                      </div>
                     )}
                   </div>
                 );
               })}
             </>
           )}
-        </div>
+        </main>
       </div>
     </div>
   );
 }
 
-function PolicyBox({ title, policy }: { title: string; policy?: Record<string, string> }) {
-  if (!policy) return null;
+function Stat({ n, l }: { n: number | string; l: string }) {
   return (
-    <div>
-      <div className="section" style={{ marginBottom: 8 }}>{title}</div>
-      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-        {Object.entries(policy).map(([k, v]) => (
-          <span key={k} className="pill"
-            style={v === 'block'
-              ? { background: 'var(--ink)', color: '#fff' }
-              : { background: 'var(--chip)', color: 'var(--ink2)' }}>
-            {attrLabel(k)} {v === 'block' ? '차단' : '허용'}
-          </span>
-        ))}
+    <div className="stat">
+      <div className="sn">{n}</div>
+      <div className="sl">{l}</div>
+    </div>
+  );
+}
+
+function PolicyDiff({
+  initial,
+  final,
+}: {
+  initial?: Record<string, string>;
+  final?: Record<string, string>;
+}) {
+  if (!initial && !final) return null;
+  return (
+    <div className="pdiff">
+      <div className="pdiff-head">
+        <span />
+        <span className="section">초기</span>
+        <span />
+        <span className="section">최종</span>
       </div>
+      {ATTRIBUTES.map((a) => {
+        const i = initial?.[a.key];
+        const f = final?.[a.key];
+        const changed = i && f && i !== f;
+        return (
+          <div className={`pdiff-row ${changed ? 'changed' : ''}`} key={a.key}>
+            <span className="pl">{a.label}</span>
+            <span className={`pv ${i === 'block' ? 'blk' : ''}`}>{dec(i)}</span>
+            <span className="parrow">{changed ? '→' : ''}</span>
+            <span className={`pv ${f === 'block' ? 'blk' : ''}`}>{f ? dec(f) : ''}</span>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function Timeline({ events }: { events: LogEvent[] }) {
+  let lastRound = -1;
+  return (
+    <div className="tl">
+      {events.map((e) => {
+        const newRound = e.round !== lastRound;
+        lastRound = e.round;
+        const hasDetail = e.detail && Object.keys(e.detail).length > 0;
+        return (
+          <div key={e.seq}>
+            {newRound && (
+              <div className="tl-round">
+                <span>라운드 {e.round}</span>
+                <i />
+              </div>
+            )}
+            <div className="tl-item">
+              <div className="tl-when">
+                <div className="tl-time">{time(e.ts)}</div>
+                <div className="tl-seq">#{e.seq}</div>
+              </div>
+              <div className="tl-rail">
+                <span className={`tl-dot ${TONE[e.action] ?? ''}`} />
+              </div>
+              <div className="tl-body">
+                <div className="tl-head">
+                  <span className={`actchip ${TONE[e.action] ?? ''}`}>
+                    {ACTION_KO[e.action] ?? e.action}
+                  </span>
+                  <span className="tl-label">{e.label}</span>
+                </div>
+                {hasDetail && (
+                  <details className="raw">
+                    <summary>상세</summary>
+                    <pre>{JSON.stringify(e.detail, null, 2)}</pre>
+                  </details>
+                )}
+              </div>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }

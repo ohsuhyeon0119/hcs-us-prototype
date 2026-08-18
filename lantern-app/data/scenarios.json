@@ -80,5 +80,74 @@
     ],
     "annotatedAt": "2026-08-18T04:33:11.113Z",
     "createdAt": "2026-08-18T04:33:11.118Z"
+  },
+  {
+    "id": "s2_club_notice",
+    "title": "AI 어시스턴트를 이용해 동호회 단톡방에 올릴 모임 공지를 작성하려고 합니다.",
+    "recipient": "동호회 단톡방 (지인 모임)",
+    "purpose": "다음 모임 일정과 장소 공지",
+    "aiTask": "단톡방에 올릴 모임 공지 메시지 초안 작성",
+    "exposed": [
+      "location",
+      "relationships",
+      "occupation"
+    ],
+    "turns": [
+      {
+        "role": "user",
+        "text": "이번 주말 동호회 모임 공지 좀 써줄래?"
+      },
+      {
+        "role": "assistant",
+        "text": "네, 어떤 내용을 넣으면 될까요?"
+      },
+      {
+        "role": "user",
+        "text": "장소는 내가 사는 봉천동 쪽으로 하려고. 서울대입구역 2번 출구 앞 스터디카페 잡아놨어."
+      },
+      {
+        "role": "assistant",
+        "text": "장소 확인했습니다. 시간은 어떻게 안내할까요?"
+      },
+      {
+        "role": "user",
+        "text": "토요일 오후 2시 시작이야. 근데 나는 3시쯤 도착할 것 같아. 남자친구랑 점심 약속이 있어서 좀 늦어."
+      },
+      {
+        "role": "assistant",
+        "text": "알겠습니다. 더 알릴 내용이 있을까요?"
+      },
+      {
+        "role": "user",
+        "text": "아 그리고 당분간 평일 모임은 어려울 것 같다고 해줘. 우리 개발팀이 릴리즈 앞두고 야근이 계속이라서."
+      },
+      {
+        "role": "assistant",
+        "text": "반영해서 공지 초안을 작성할까요?"
+      },
+      {
+        "role": "user",
+        "text": "응, 단톡방에 그대로 올릴 수 있게 써 줘."
+      }
+    ],
+    "spans": [
+      {
+        "attr": "location",
+        "turnIndex": 2,
+        "text": "내가 사는 봉천동 쪽"
+      },
+      {
+        "attr": "relationships",
+        "turnIndex": 4,
+        "text": "남자친구랑"
+      },
+      {
+        "attr": "occupation",
+        "turnIndex": 6,
+        "text": "우리 개발팀"
+      }
+    ],
+    "annotatedAt": "2026-08-18T23:56:21.193Z",
+    "createdAt": "2026-08-18T23:56:21.202Z"
   }
 ]
