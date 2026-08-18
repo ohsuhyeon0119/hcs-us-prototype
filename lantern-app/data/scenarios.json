@@ -1,0 +1,84 @@
+[
+  {
+    "id": "s1_manager_schedule",
+    "title": "You are about to use an AI assistant to write an email to your manager.",
+    "recipient": "Your manager (team lead)",
+    "purpose": "Requesting a schedule change for next quarter",
+    "aiTask": "Draft a schedule-change request email to the manager",
+    "exposed": [
+      "health",
+      "income",
+      "occupation"
+    ],
+    "turns": [
+      {
+        "role": "user",
+        "text": "Morning! Can I ask you something about work planning?"
+      },
+      {
+        "role": "assistant",
+        "text": "Of course. What are you working on?"
+      },
+      {
+        "role": "user",
+        "text": "Hey, I want to rethink how next quarter is laid out."
+      },
+      {
+        "role": "assistant",
+        "text": "Happy to help. What would you like to change?"
+      },
+      {
+        "role": "user",
+        "text": "I need to move some of next quarter's sprint schedule. Can you help me write an email to my manager?"
+      },
+      {
+        "role": "assistant",
+        "text": "Sure. Tell me about any constraints I should work around."
+      },
+      {
+        "role": "user",
+        "text": "Since last month I've been going to physical therapy twice a week, so I have to keep Tuesday afternoons open."
+      },
+      {
+        "role": "assistant",
+        "text": "Got it, I'll keep Tuesday afternoons clear. How about weekends?"
+      },
+      {
+        "role": "user",
+        "text": "My pay is still junior-level and I took on a heavy loan when I moved, so on weekends I do some freelance publishing work."
+      },
+      {
+        "role": "assistant",
+        "text": "Understood. Shall I draft the email now?"
+      },
+      {
+        "role": "user",
+        "text": "Yes, write it as an email to my manager."
+      }
+    ],
+    "spans": [
+      {
+        "attr": "health",
+        "turnIndex": 6,
+        "text": "going to physical therapy twice a week"
+      },
+      {
+        "attr": "income",
+        "turnIndex": 8,
+        "text": "My pay is still junior-level"
+      },
+      {
+        "attr": "income",
+        "turnIndex": 8,
+        "text": "I took on a heavy loan"
+      },
+      {
+        "attr": "occupation",
+        "turnIndex": 8,
+        "text": "freelance publishing work"
+      }
+    ],
+    "annotatedAt": "2026-08-18T02:20:09.408Z",
+    "createdAt": "2026-08-18T02:20:09.433Z"
+  }
+]
