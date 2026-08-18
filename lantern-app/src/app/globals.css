@@ -42,7 +42,7 @@ h2.title{font-size:22px;font-weight:700;line-height:1.45;margin:0 0 22px}
 .footerbar{display:flex;align-items:center;gap:12px;justify-content:flex-end;margin-top:26px}
 
 /* ---------- buttons ---------- */
-.btn{border:none;border-radius:8px;padding:12px 22px;font-size:15px;font-weight:600;cursor:pointer}
+.btn{border:none;border-radius:8px;padding:12px 22px;font-size:15px;font-weight:600;cursor:pointer;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;gap:8px}
 .btn.primary{background:var(--accent);color:#fff}
 .btn.primary:disabled{background:var(--border-strong);cursor:not-allowed}
 .btn.ghost{background:var(--surface);color:var(--ink2);border:1px solid var(--border-strong)}
