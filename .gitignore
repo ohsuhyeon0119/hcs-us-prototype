@@ -1,0 +1,26 @@
+# --- secrets: never commit ---
+.env
+.env.local
+.env.*.local
+**/.env
+**/.env.local
+
+# --- dependencies / build output ---
+node_modules/
+.next/
+out/
+*.tsbuildinfo
+
+# --- participant data (human-subjects; keep off a public remote) ---
+lantern-app/data/sessions/
+
+# --- unpublished research material (public repo: excluded deliberately) ---
+etc/
+*.pdf
+HANDOFF.md
+lantern_formative_study_prototype_design.md
+design/lantern.pen
+design/_bootstrap_lantern.py
+
+# --- os ---
+.DS_Store
