@@ -79,8 +79,6 @@ h2.title{font-size:22px;font-weight:700;line-height:1.45;margin:0 0 22px}
 .bubble{max-width:82%;padding:11px 14px;border-radius:12px;font-size:14px;line-height:1.6;white-space:pre-wrap;word-break:break-word;position:relative}
 .bubble.u{background:#E7ECF5;border:1px solid #D5DCEA;color:var(--ink)}
 .bubble.a{background:var(--surface);border:1px solid var(--border);color:var(--ink2)}
-.mask{font-family:var(--mono);font-size:13px;color:var(--ink2);cursor:help;border-radius:3px}
-.mask:hover{background:var(--chip)}
 .editbtn{position:absolute;top:-9px;right:8px;font-size:10px;font-weight:600;letter-spacing:.4px;padding:2px 7px;border-radius:5px;border:1px solid var(--border-strong);background:var(--surface);color:var(--ink3);cursor:pointer;opacity:0;transition:opacity .12s}
 .turn.u:hover .editbtn{opacity:1}
 
@@ -138,34 +136,38 @@ table.admin th,table.admin td{text-align:left;padding:10px 12px;border-bottom:1p
 table.admin th{font-size:11px;letter-spacing:.6px;color:var(--ink3);text-transform:uppercase}
 .pill{display:inline-block;font-size:11px;padding:2px 8px;border-radius:99px;background:var(--chip);color:var(--ink2);margin-right:4px}
 
-/* ---------- mask tooltip ---------- */
-.mask{position:relative;display:inline-block}
-.mask .tip{display:none;position:absolute;bottom:calc(100% + 8px);left:0;z-index:20;
-  width:280px;background:var(--ink);color:#fff;border-radius:9px;padding:12px 14px;
-  box-shadow:0 8px 24px #0E121A66;font-family:var(--font);white-space:normal}
-.mask:hover .tip{display:block}
-.mask .tip .th{font-size:12px;font-weight:600;display:flex;align-items:center;gap:6px}
-.mask .tip .tb{font-size:13px;color:#A9B1C0;text-decoration:line-through;margin-top:6px;line-height:1.5}
 
-/* ---------- admin ---------- */
-.navlink{font-size:13px;font-weight:600;color:var(--ink3);text-decoration:none;padding:7px 12px;border-radius:8px}
-.navlink:hover{background:var(--sunken);color:var(--ink2)}
-.adminwrap{padding:28px 32px;display:flex;flex-direction:column;gap:22px;max-width:1240px;margin:0 auto}
-.split{display:flex;gap:22px;align-items:flex-start}
-.split .left{width:300px;flex:none;display:flex;flex-direction:column;gap:8px}
-.split .right{flex:1;min-width:0;display:flex;flex-direction:column;gap:18px}
-.sessionitem{text-align:left;width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--surface);cursor:pointer}
-.sessionitem.on{border-color:var(--accent);background:var(--accent-soft)}
-.sessionitem .pid{font-family:var(--mono);font-weight:700;font-size:13px}
-.sessionitem .meta{font-size:11px;color:var(--ink3);margin-top:4px;line-height:1.5}
-.block{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px 22px}
-.block h3{margin:0 0 14px;font-size:11px;font-weight:700;letter-spacing:1px;color:var(--ink3)}
-.qa{display:flex;gap:14px;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
-.qa:last-child{border-bottom:none}
-.qa .q{flex:1;color:var(--ink2)}
-.qa .a{font-weight:600;text-align:right}
-.dir-tighten{color:var(--conflict);font-weight:600}
-.dir-loosen{color:var(--ok);font-weight:600}
-.mono{font-family:var(--mono);font-size:12px}
-details.raw{margin-top:6px}
-details.raw pre{background:var(--sunken);border:1px solid var(--border);border-radius:8px;padding:12px;font-size:11.5px;line-height:1.55;overflow:auto;max-height:340px}
+/* ---------- rewrite highlights ---------- */
+.hl{border-radius:3px;padding:1px 3px;font-weight:600;position:relative;cursor:help}
+.hl.before{background:var(--conflict-soft);color:var(--conflict)}
+.hl.after{background:var(--accent-soft);color:var(--accent)}
+.hl.pairon{outline:1px solid currentColor}
+
+/* ---------- execute block ---------- */
+.execblock{display:flex;flex-direction:column;gap:8px;padding-top:12px}
+.pending{display:flex;align-items:center;gap:7px;font-size:11px;color:var(--accent)}
+.pending i{width:7px;height:7px;border-radius:50%;background:var(--accent);display:inline-block}
+.execbtn{width:100%;padding:12px 18px;border-radius:9px;border:none;background:var(--accent);color:#fff;
+  font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+.execbtn:disabled{background:var(--border-strong);cursor:not-allowed}
+
+/* ---------- diff modal ---------- */
+.modal.diff{width:1120px;max-width:95vw;height:min(88vh,760px)}
+.diffhead{display:flex;gap:12px}
+.diffhead>div{flex:1;display:flex;align-items:center;gap:8px}
+.diffhead .note{margin-left:auto}
+.diffscroll{flex:1;min-height:0;overflow-y:auto;background:var(--sunken);border:1px solid var(--border);
+  border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.diffrow{display:flex;gap:12px;align-items:stretch}
+.diffcell{flex:1;min-width:0;display:flex}
+.diffcell>.turn{flex:1}
+.diffloading{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px}
+
+/* ---------- why tooltip ---------- */
+.whytip{position:absolute;top:calc(100% + 8px);left:0;z-index:60;width:330px;display:block;
+  background:var(--ink);border-radius:10px;padding:13px 15px;box-shadow:0 10px 28px #0E121A80;
+  font-family:var(--font);font-weight:400;white-space:normal;cursor:default}
+.whytip .wh{display:block;font-size:12px;font-weight:700;color:#fff;text-transform:capitalize}
+.whytip .wb{display:block;font-size:12.5px;line-height:1.65;color:#C3CAD6;margin-top:8px}
+.whytip .wr{display:block;height:1px;background:#39404D;margin:10px 0}
+.whytip .wp{display:block;font-size:11px;line-height:1.6;color:#8D95A3}

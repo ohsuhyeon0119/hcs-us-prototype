@@ -1,5 +1,5 @@
 import { ATTRIBUTES, ATTR_KEYS } from './types';
-import type { AttrKey, Inference, Span, Turn } from './types';
+import type { AttrKey, Change, Inference, Policy, RewriteResult, Span, Turn } from './types';
 
 const API = 'https://api.openai.com/v1/chat/completions';
 
@@ -86,8 +86,6 @@ export async function inferAttributes(turns: Turn[]): Promise<Inference[]> {
 Attribute catalog:
 ${catalog}
 
-Some spans may appear as runs of asterisks (****). Those were removed before you saw them: you may NOT use them as evidence, but you MAY still infer an attribute if the surrounding context makes it recoverable.
-
 For each attribute in the catalog decide whether it is inferable from this conversation with reasonable confidence. If it is, state the value you would guess, and quote the exact phrases from the conversation that enabled it (copy them verbatim; never quote asterisks). Keep reasoning to one sentence. Do not moralise and do not recommend anything.
 
 Return JSON: {"inferences":[{"attr":"<key>","inferable":<bool>,"value":"<short guess or empty>","cues":["<verbatim quote>"],"reasoning":"<one sentence>"}]} with one entry per catalog attribute.`;
@@ -101,7 +99,7 @@ Return JSON: {"inferences":[{"attr":"<key>","inferable":<bool>,"value":"<short g
       inferable: Boolean(i?.inferable),
       value: i?.value ?? '',
       cues: Array.isArray(i?.cues)
-        ? i!.cues.filter((c) => typeof c === 'string' && c.trim() && !c.includes('**'))
+        ? i!.cues.filter((c) => typeof c === 'string' && c.trim())
         : [],
       reasoning: i?.reasoning ?? '',
     };
@@ -122,10 +120,76 @@ Recipient: ${task.recipient}
 Purpose: ${task.purpose}
 Task: ${task.aiTask}
 
-Runs of asterisks (****) are information that was withheld from you. Never reproduce them, never guess what they said, and never mention that anything is missing. Simply write the best output you can with what remains — if that makes the result vaguer or less useful, let it be vaguer.
+Write only from what the conversation actually says. Never invent specifics it does not contain, and never remark that something seems missing — if the conversation is vague, let the output be vague.
 
 Return JSON: {"output":"<the finished text>"}`;
 
   const out = await json<{ output?: string }>(sys, transcript(turns));
   return (out.output ?? '').trim();
+}
+
+/* ------------------------------------------------------------------ */
+/* 4. Rewrite — enforce the policy by rewriting, not by blanking out    */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Always rewrites from the participant's own text (`base`), never from a
+ * previously rewritten version. That is what makes un-blocking work: the
+ * original wording is still there to draw on, but the result is re-derived
+ * under the whole current policy rather than restored verbatim.
+ */
+export async function rewriteForPolicy(base: Turn[], policy: Policy): Promise<RewriteResult> {
+  const blocked = ATTR_KEYS.filter((k) => policy[k] === 'block');
+  const allowed = ATTR_KEYS.filter((k) => policy[k] !== 'block');
+
+  if (blocked.length === 0) return { turns: base, changes: [] };
+
+  const sys = `You rewrite a user's own chat messages so that a privacy policy holds, without damaging the conversation.
+
+Attribute catalog:
+${catalog}
+
+BLOCKED (must not be inferable from anything explicitly stated): ${blocked.join(', ') || 'none'}
+ALLOWED (leave exactly as the user wrote it): ${allowed.join(', ') || 'none'}
+
+Rules:
+1. Rewrite USER turns only. Copy ASSISTANT turns through unchanged.
+2. For each blocked attribute, find the phrases that state or directly reveal it and either abstract them to something less specific, or drop them. Choose whichever keeps the message natural.
+3. Preserve everything the user's request actually needs — constraints, dates, asks, tone, first person, casual register. A rewrite that makes the request unanswerable is a failure.
+4. Never touch a phrase only because it reveals an ALLOWED attribute. The user chose to disclose those.
+5. Change as little as possible. If a turn needs no change, return its text byte-for-byte.
+6. Never insert placeholders, asterisks, brackets, or any note that something was removed. The result must read as if the user wrote it that way.
+
+For every phrase you rewrite, report:
+- "before": the exact substring of the ORIGINAL turn you replaced, copied character for character.
+- "after": the exact substring of YOUR REWRITTEN turn that replaced it, copied character for character (empty string if you simply deleted it).
+- "strategy": "generalised" if you made it less specific, "removed" if you deleted it, "ambiguity" if you made it vague.
+- "reason": one or two sentences — what the original phrase gave away, and why this replacement still lets the task succeed.
+
+Return JSON:
+{"turns":[{"role":"user"|"assistant","text":"..."}],
+ "changes":[{"turnIndex":<int>,"attr":"<key>","strategy":"...","before":"...","after":"...","reason":"..."}]}
+The "turns" array must have exactly ${base.length} entries, in the original order.`;
+
+  const out = await json<{ turns?: Turn[]; changes?: Change[] }>(sys, transcript(base));
+
+  const turns: Turn[] = base.map((t, i) => {
+    const r = out.turns?.[i];
+    if (t.role === 'assistant' || !r || typeof r.text !== 'string' || !r.text.trim()) return t;
+    return { role: 'user', text: r.text };
+  });
+
+  const changes = (out.changes ?? []).filter(
+    (c) =>
+      ATTR_KEYS.includes(c.attr as AttrKey) &&
+      typeof c.turnIndex === 'number' &&
+      base[c.turnIndex]?.role === 'user' &&
+      typeof c.before === 'string' &&
+      c.before.length > 0 &&
+      base[c.turnIndex].text.includes(c.before) &&
+      typeof c.after === 'string' &&
+      (c.after === '' || turns[c.turnIndex].text.includes(c.after)),
+  );
+
+  return { turns, changes };
 }

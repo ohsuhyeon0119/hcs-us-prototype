@@ -33,6 +33,22 @@ export type Scenario = {
   createdAt: string;
 };
 
+export type RewriteStrategy = 'generalised' | 'removed' | 'ambiguity' | 'other';
+
+/** One phrase the system rewrote because an attribute is blocked. */
+export type Change = {
+  turnIndex: number;
+  attr: AttrKey;
+  strategy: RewriteStrategy;
+  /** Exact substring of the base turn that was rewritten. */
+  before: string;
+  /** Exact substring of the rewritten turn that replaced it ('' when deleted). */
+  after: string;
+  reason: string;
+};
+
+export type RewriteResult = { turns: Turn[]; changes: Change[] };
+
 export type Inference = {
   attr: AttrKey;
   inferable: boolean;
@@ -58,6 +74,9 @@ export type LogEvent = {
     | 'baseline'
     | 'initial_policy'
     | 'policy_edit'
+    | 'rewrite_preview'
+    | 'rewrite_apply'
+    | 'rewrite_cancel'
     | 'content_edit'
     | 'simulate'
     | 'reflection'

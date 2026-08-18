@@ -1,17 +1,14 @@
 'use client';
-import { segmentTurn } from '@/lib/mask';
-import { attrLabel } from '@/lib/types';
-import type { Policy, Span, Turn } from '@/lib/types';
+import { afterMarks, segment } from '@/lib/highlight';
+import type { Change, Turn } from '@/lib/types';
 
 export default function Chat({
   turns,
-  spans,
-  policy,
+  changes = [],
   onEdit,
 }: {
   turns: Turn[];
-  spans: Span[];
-  policy: Policy;
+  changes?: Change[];
   onEdit?: (index: number) => void;
 }) {
   return (
@@ -23,7 +20,7 @@ export default function Chat({
               <div className="bubble a">{t.text}</div>
             </div>
           );
-        const segs = segmentTurn(i, t.text, spans, policy);
+        const segs = segment(t.text, afterMarks(changes, i));
         return (
           <div className="turn u" key={i}>
             <div className="bubble u">
@@ -33,16 +30,12 @@ export default function Chat({
                 </button>
               )}
               {segs.map((s, j) =>
-                s.masked ? (
-                  <span className="mask" key={j}>
-                    {s.text}
-                    <span className="tip">
-                      <span className="th">🚫 {attrLabel(s.attr!)} · masked by your policy</span>
-                      <span className="tb">{s.original}</span>
-                    </span>
-                  </span>
-                ) : (
+                s.change === undefined ? (
                   <span key={j}>{s.text}</span>
+                ) : (
+                  <span className="hl after" key={j} title="rewritten to satisfy your policy">
+                    {s.text}
+                  </span>
                 ),
               )}
             </div>

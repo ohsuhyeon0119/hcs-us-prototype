@@ -1,51 +1,55 @@
 'use client';
 import { useState } from 'react';
 import Chat from './Chat';
-import { ATTRIBUTES, attrLabel } from '@/lib/types';
-import type { AttrKey, Decision, Inference, Policy, Scenario, SimulationResult, Span, Turn } from '@/lib/types';
+import RewriteModal from './RewriteModal';
+import { ATTRIBUTES, ATTR_KEYS, attrLabel } from '@/lib/types';
+import type {
+  AttrKey, Change, Decision, Inference, Policy, RewriteResult, Scenario, SimulationResult, Turn,
+} from '@/lib/types';
 
 type HistoryEntry = { round: string; text: string };
+const same = (a: Policy, b: Policy) => ATTR_KEYS.every((k) => a[k] === b[k]);
 
 export default function Workspace({
-  scenario,
-  policy,
-  setPolicy,
-  turns,
-  setTurns,
-  spans,
-  setSpans,
-  history,
-  pushHistory,
-  log,
-  onFinish,
+  scenario, policy, setPolicy, turns, setTurns, history, pushHistory, log, onFinish,
 }: {
   scenario: Scenario;
   policy: Policy;
   setPolicy: (p: Policy) => void;
+  /** The participant's own words. Rewrites are always derived from these. */
   turns: Turn[];
   setTurns: (t: Turn[]) => void;
-  spans: Span[];
-  setSpans: (s: Span[]) => void;
   history: HistoryEntry[];
   pushHistory: (e: HistoryEntry) => void;
   log: (type: string, payload: Record<string, unknown>) => void;
   onFinish: () => void;
 }) {
+  const [applied, setApplied] = useState<Turn[]>(turns);
+  const [changes, setChanges] = useState<Change[]>([]);
+  const [appliedPolicy, setAppliedPolicy] = useState<Policy>(policy);
+
   const [round, setRound] = useState(0);
   const [result, setResult] = useState<SimulationResult | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const [modal, setModal] = useState(false);
+  const [preview, setPreview] = useState<RewriteResult | null>(null);
+  const [previewing, setPreviewing] = useState(false);
+  const [previewError, setPreviewError] = useState<string | null>(null);
+
   const [editing, setEditing] = useState<number | null>(null);
   const [draft, setDraft] = useState('');
 
+  const dirty = !same(policy, appliedPolicy);
+  const pending = ATTR_KEYS.filter((k) => policy[k] !== appliedPolicy[k]);
+  const blocked = ATTR_KEYS.filter((k) => policy[k] === 'block');
+
+  /* ---------------- policy ---------------- */
   const togglePolicy = (attr: AttrKey, next: Decision) => {
     if (policy[attr] === next) return;
     const before = policy[attr];
     setPolicy({ ...policy, [attr]: next });
-    pushHistory({
-      round: round === 0 ? 'R0' : `R${round}`,
-      text: `${attrLabel(attr)} · ${before} → ${next}`,
-    });
     log('policy_edit', {
       target_attribute: attr,
       direction: next === 'block' ? 'tighten' : 'loosen',
@@ -53,50 +57,67 @@ export default function Workspace({
       before_state: before,
       after_state: next,
       round,
-      preceding_simulation: result ? summarize(result, policy) : null,
+      applied: false,
+      preceding_simulation: result ? summarize(result, appliedPolicy) : null,
     });
   };
 
-  const openEdit = (i: number) => {
-    setEditing(i);
-    setDraft(turns[i].text);
-  };
-
-  const saveEdit = async () => {
-    if (editing === null) return;
-    const original = turns[editing].text;
-    if (draft.trim() === original.trim()) {
-      setEditing(null);
-      return;
-    }
-    const next = turns.map((t, i) => (i === editing ? { ...t, text: draft } : t));
-    setTurns(next);
-    log('content_edit', {
-      turn_index: editing,
-      edit_type: 'content',
-      original_text: original,
-      edited_text: draft,
-      round,
-    });
-    pushHistory({ round: `R${round}`, text: `Content edit · turn ${editing + 1}` });
-    setEditing(null);
-    // Re-annotate so masking stays correct after the edit.
-    setBusy(true);
+  /* ---------------- execute → rewrite ---------------- */
+  const execute = async () => {
+    setModal(true);
+    setPreview(null);
+    setPreviewError(null);
+    setPreviewing(true);
     try {
-      const r = await fetch('/api/annotate', {
+      const r = await fetch('/api/rewrite', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ turns: next }),
+        body: JSON.stringify({ turns, policy }),
       });
       const d = await r.json();
-      if (d.spans) setSpans(d.spans as Span[]);
-    } catch {
-      /* keep old spans */
+      if (!r.ok) throw new Error(d.error || 'rewrite failed');
+      setPreview(d as RewriteResult);
+      log('rewrite_preview', { policy, changes: d.changes });
+    } catch (e) {
+      setPreviewError((e as Error).message);
     } finally {
-      setBusy(false);
+      setPreviewing(false);
     }
   };
 
+  const applyRewrite = () => {
+    if (!preview) return;
+    setApplied(preview.turns);
+    setChanges(preview.changes);
+    setAppliedPolicy(policy);
+    setModal(false);
+    const byAttr = [...new Set(preview.changes.map((c) => attrLabel(c.attr)))];
+    pushHistory({
+      round: `R${round}`,
+      text: preview.changes.length
+        ? `Rewrite applied · ${preview.changes.length} phrase${preview.changes.length > 1 ? 's' : ''} (${byAttr.join(', ')})`
+        : 'Policy applied · nothing to rewrite',
+    });
+    log('rewrite_apply', { policy, changes: preview.changes, round });
+  };
+
+  /* ---------------- manual edit ---------------- */
+  const saveEdit = () => {
+    if (editing === null) return;
+    const original = applied[editing].text;
+    if (draft.trim() === original.trim()) return setEditing(null);
+    // An edit overrides both what is shown and the wording future rewrites start from.
+    setApplied(applied.map((t, i) => (i === editing ? { ...t, text: draft } : t)));
+    setTurns(turns.map((t, i) => (i === editing ? { ...t, text: draft } : t)));
+    setChanges(changes.filter((c) => c.turnIndex !== editing));
+    log('content_edit', {
+      turn_index: editing, edit_type: 'content', original_text: original, edited_text: draft, round,
+    });
+    pushHistory({ round: `R${round}`, text: `Content edit · message ${editing + 1}` });
+    setEditing(null);
+  };
+
+  /* ---------------- simulate ---------------- */
   const simulate = async () => {
     setBusy(true);
     setError(null);
@@ -105,9 +126,7 @@ export default function Workspace({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          turns,
-          spans,
-          policy,
+          turns: applied,
           recipient: scenario.recipient,
           purpose: scenario.purpose,
           aiTask: scenario.aiTask,
@@ -118,7 +137,7 @@ export default function Workspace({
       const next = round + 1;
       setResult(d as SimulationResult);
       setRound(next);
-      log('simulate', { round: next, result: summarize(d as SimulationResult, policy) });
+      log('simulate', { round: next, result: summarize(d as SimulationResult, appliedPolicy) });
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -127,9 +146,9 @@ export default function Workspace({
   };
 
   const conflicts: Inference[] =
-    result?.inferences.filter((i) => i.inferable && policy[i.attr] === 'block') ?? [];
+    result?.inferences.filter((i) => i.inferable && appliedPolicy[i.attr] === 'block') ?? [];
   const alsoInferable =
-    result?.inferences.filter((i) => i.inferable && policy[i.attr] !== 'block') ?? [];
+    result?.inferences.filter((i) => i.inferable && appliedPolicy[i.attr] !== 'block') ?? [];
 
   return (
     <>
@@ -152,23 +171,16 @@ export default function Workspace({
       <div className="panels">
         {/* ---------------- Panel A ---------------- */}
         <div className="panel a">
-          <div className="panelhead">
-            <span className="t">A · MY POLICY</span>
-          </div>
+          <div className="panelhead"><span className="t">A · MY POLICY</span></div>
           <div className="panelbody">
             <div className="grid6">
               {ATTRIBUTES.map((a) => (
                 <div className="policyrow" key={a.key}>
-                  <div className="labels">
-                    <div className="attr">{a.label}</div>
-                  </div>
+                  <div className="labels"><div className="attr">{a.label}</div></div>
                   <div className="seg">
                     {(['allow', 'block'] as Decision[]).map((d) => (
-                      <button
-                        key={d}
-                        className={policy[a.key] === d ? 'on' : ''}
-                        onClick={() => togglePolicy(a.key, d)}
-                      >
+                      <button key={d} className={policy[a.key] === d ? 'on' : ''}
+                        onClick={() => togglePolicy(a.key, d)}>
                         {d === 'allow' ? 'Allow' : 'Block'}
                       </button>
                     ))}
@@ -176,6 +188,17 @@ export default function Workspace({
                 </div>
               ))}
             </div>
+
+            {dirty && (
+              <div className="execblock">
+                <div className="pending">
+                  <i />
+                  {pending.length} policy change{pending.length > 1 ? 's' : ''} not applied yet
+                </div>
+                <button className="execbtn" onClick={execute}>✦ Execute</button>
+              </div>
+            )}
+
             <div className="spacer" />
             <div className="rule" />
             <div className="section">CHANGE HISTORY</div>
@@ -195,10 +218,12 @@ export default function Workspace({
           <div className="panelhead">
             <span className="t">B · CONTENT</span>
             <div className="spacer" />
-            <span className="r">hover a masked phrase to see the original</span>
+            {changes.length > 0 && (
+              <span className="r">{changes.length} phrases rewritten by your policy</span>
+            )}
           </div>
           <div className="panelbody">
-            <Chat turns={turns} spans={spans} policy={policy} onEdit={openEdit} />
+            <Chat turns={applied} changes={changes} onEdit={(i) => { setEditing(i); setDraft(applied[i].text); }} />
           </div>
         </div>
 
@@ -208,7 +233,9 @@ export default function Workspace({
             <span className="t">C · SIMULATION</span>
             <div className="spacer" />
             <span className="r">
-              {!result ? '' : conflicts.length ? `${conflicts.length} policy conflict${conflicts.length > 1 ? 's' : ''}` : 'no conflicts'}
+              {!result ? '' : conflicts.length
+                ? `${conflicts.length} policy conflict${conflicts.length > 1 ? 's' : ''}`
+                : 'no conflicts'}
             </span>
           </div>
           <div className="panelbody">
@@ -236,10 +263,7 @@ export default function Workspace({
                         <span className="badge conflict">Conflicts with my policy</span>
                       </div>
                       <div className="kv">
-                        <div>
-                          <div className="k">My policy</div>
-                          <div className="v">Block</div>
-                        </div>
+                        <div><div className="k">My policy</div><div className="v">Block</div></div>
                         <div>
                           <div className="k">Simulation result</div>
                           <div className="v">Inferable{c.value ? ` — ${c.value}` : ''}</div>
@@ -247,10 +271,10 @@ export default function Workspace({
                       </div>
                       <div className="cue">
                         <div className="k">
-                          {c.cues.length > 0 ? 'Cue that enabled the inference' : 'No literal cue — inferred from context'}
+                          {c.cues.length ? 'Cue that enabled the inference' : 'No literal cue — inferred from context'}
                         </div>
                         <div className="q">
-                          {c.cues.length > 0 ? c.cues.map((q) => `“${q}”`).join(', ') : c.reasoning}
+                          {c.cues.length ? c.cues.map((q) => `“${q}”`).join(', ') : c.reasoning}
                         </div>
                       </div>
                     </div>
@@ -282,34 +306,35 @@ export default function Workspace({
         </div>
       </div>
 
+      {modal && (
+        <RewriteModal
+          base={turns}
+          result={preview}
+          loading={previewing}
+          error={previewError}
+          blocked={blocked}
+          onApply={applyRewrite}
+          onCancel={() => { setModal(false); log('rewrite_cancel', { policy }); }}
+        />
+      )}
+
       {editing !== null && (
         <div className="modalwrap" onClick={() => setEditing(null)}>
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="mhead">
               <span className="mtitle">Edit message</span>
               <div className="spacer" />
-              <button className="btn ghost sm" onClick={() => setEditing(null)}>
-                ✕
-              </button>
+              <button className="btn ghost sm" onClick={() => setEditing(null)}>✕</button>
             </div>
-            <textarea
-              className="ta"
-              style={{ minHeight: 160, borderColor: 'var(--accent)' }}
-              value={draft}
-              onChange={(e) => setDraft(e.target.value)}
-              autoFocus
-            />
+            <textarea className="ta" style={{ minHeight: 160, borderColor: 'var(--accent)' }}
+              value={draft} onChange={(e) => setDraft(e.target.value)} autoFocus />
             <div className="note">
-              Rewrite it however you like — delete, generalise, or make it ambiguous. Nothing is
-              rewritten for you.
+              Rewrite it however you like — delete, generalise, or make it ambiguous. Your edit
+              replaces the system&apos;s wording and becomes what future rewrites start from.
             </div>
             <div className="footerbar" style={{ marginTop: 0 }}>
-              <button className="btn ghost" onClick={() => setEditing(null)}>
-                Cancel
-              </button>
-              <button className="btn primary" onClick={saveEdit}>
-                Save
-              </button>
+              <button className="btn ghost" onClick={() => setEditing(null)}>Cancel</button>
+              <button className="btn primary" onClick={saveEdit}>Save</button>
             </div>
           </div>
         </div>

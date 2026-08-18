@@ -2,7 +2,7 @@
 import { useCallback, useState } from 'react';
 import Workspace from './Workspace';
 import { ATTR_KEYS } from '@/lib/types';
-import type { Decision, Policy, Scenario, Span, Turn } from '@/lib/types';
+import type { Policy, Scenario, Turn } from '@/lib/types';
 
 type Step = 'demographics' | 'scenario' | 'workspace' | 'reflection' | 'done';
 type HistoryEntry = { round: string; text: string };
@@ -29,7 +29,6 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
 
   const [policy, setPolicy] = useState<Policy>({});
   const [turns, setTurns] = useState<Turn[]>([]);
-  const [spans, setSpans] = useState<Span[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [stopReason, setStopReason] = useState('');
   const [stopText, setStopText] = useState('');
@@ -57,7 +56,6 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
     const s = scenarios[index];
     setPolicy(Object.fromEntries(ATTR_KEYS.map((k) => [k, 'allow'])) as Policy);
     setTurns(s.turns);
-    setSpans(s.spans ?? []);
     setHistory([]);
     setStopReason('');
     setStopText('');
@@ -169,8 +167,6 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
           setPolicy={setPolicy}
           turns={turns}
           setTurns={setTurns}
-          spans={spans}
-          setSpans={setSpans}
           history={history}
           pushHistory={(e) => setHistory((h) => [...h, e])}
           log={log}
