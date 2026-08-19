@@ -5,7 +5,7 @@ import { ATTR_KEYS, attrLabel } from '@/lib/types';
 import { createLogger } from '@/lib/logger';
 import type { Logger } from '@/lib/logger';
 import type { ActionType } from '@/lib/types';
-import type { Policy, Scenario, Turn } from '@/lib/types';
+import type { Policy, Scenario } from '@/lib/types';
 
 type Step = 'demographics' | 'scenario' | 'workspace' | 'reflection' | 'done';
 
@@ -39,7 +39,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
   const [demo, setDemo] = useState<Record<string, string>>({});
 
   const [policy, setPolicy] = useState<Policy>({});
-  const [turns, setTurns] = useState<Turn[]>([]);
+  const [draft, setDraft] = useState('');
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [stopReason, setStopReason] = useState('');
   const [stopText, setStopText] = useState('');
@@ -117,7 +117,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
     const s = scenarios[index];
     loggerRef.current?.setContext({ scenarioId: s.id, scenarioIndex: index, round: 0 });
     setPolicy(Object.fromEntries(ATTR_KEYS.map((k) => [k, 'allow'])) as Policy);
-    setTurns(s.turns);
+    setDraft(s.draft);
     setHistory([]);
     setStopReason('');
     setStopText('');
@@ -223,7 +223,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
                   purpose: scenario.purpose,
                   ai_task: scenario.aiTask,
                   initial_policy: init,
-                  initial_turns: scenario.turns,
+                  initial_draft: scenario.draft,
                 });
                 setStep('workspace');
               }}
@@ -240,11 +240,12 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
       <>
         <TopBar pid={pid} right={`Scenario ${si + 1} / ${scenarios.length}`} />
         <Workspace
+          key={scenario.id}
           scenario={scenario}
           policy={policy}
           setPolicy={setPolicy}
-          turns={turns}
-          setTurns={setTurns}
+          draft={draft}
+          setDraft={setDraft}
           history={history}
           pushHistory={(e) => setHistory((h) => [...h, e])}
           logger={loggerRef.current!}
@@ -299,7 +300,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
                   final_policy_readable: ATTR_KEYS.map(
                     (k) => `${attrLabel(k)} ${policy[k] === 'block' ? '차단' : '허용'}`,
                   ).join(' · '),
-                  final_turns: turns,
+                  final_draft: draft,
                 });
                 await log('scenario_end', `시나리오 ${si + 1} 종료`, {});
                 if (si + 1 < scenarios.length) startScenario(si + 1);

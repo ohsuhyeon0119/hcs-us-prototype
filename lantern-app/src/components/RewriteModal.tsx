@@ -2,7 +2,14 @@
 import { useState } from 'react';
 import { afterMarks, beforeMarks, segment } from '@/lib/highlight';
 import { attrLabel } from '@/lib/types';
-import type { Change, RewriteResult, Turn } from '@/lib/types';
+import type { Change, RewriteResult } from '@/lib/types';
+
+const STRATEGY: Record<string, string> = {
+  generalised: '일반화',
+  removed: '삭제',
+  ambiguity: '모호화',
+  other: '수정',
+};
 
 export default function RewriteModal({
   base,
@@ -12,42 +19,41 @@ export default function RewriteModal({
   blocked,
   onApply,
   onCancel,
+  readOnly = false,
 }: {
-  base: Turn[];
+  base: string;
   result: RewriteResult | null;
   loading: boolean;
   error: string | null;
   blocked: string[];
   onApply: () => void;
   onCancel: () => void;
+  /** Reviewing an already-applied rewrite rather than approving a new one. */
+  readOnly?: boolean;
 }) {
   const [hover, setHover] = useState<{ change: number; side: 'l' | 'r' } | null>(null);
   const changes = result?.changes ?? [];
-  const after = result?.turns ?? base;
+  const after = result?.draft ?? base;
 
-  const cell = (side: 'l' | 'r', turn: Turn, i: number) => {
-    const marks = side === 'l' ? beforeMarks(changes, i) : afterMarks(changes, i);
-    const segs = segment(turn.text, marks);
+  const pane = (side: 'l' | 'r', text: string) => {
+    const segs = segment(text, side === 'l' ? beforeMarks(changes) : afterMarks(changes));
     return (
-      <div className={`turn ${turn.role === 'user' ? 'u' : 'a'}`}>
-        <div className={`bubble ${turn.role === 'user' ? 'u' : 'a'}`}>
-          {segs.map((s, j) => {
-            if (s.change === undefined) return <span key={j}>{s.text}</span>;
-            const c = changes[s.change];
-            const on = hover?.change === s.change;
-            return (
-              <span
-                key={j}
-                className={`hl ${side === 'l' ? 'before' : 'after'} ${on ? 'pairon' : ''}`}
-                onMouseEnter={() => setHover({ change: s.change!, side })}
-                onMouseLeave={() => setHover(null)}
-              >
-                {s.text}
-                {on && hover?.side === side && <Why c={c} />}
-              </span>
-            );
-          })}
-        </div>
+      <div className="diffpane">
+        {segs.map((s, j) => {
+          if (s.change === undefined) return <span key={j}>{s.text}</span>;
+          const on = hover?.change === s.change;
+          return (
+            <span
+              key={j}
+              className={`hl ${side === 'l' ? 'before' : 'after'} ${on ? 'pairon' : ''}`}
+              onMouseEnter={() => setHover({ change: s.change!, side })}
+              onMouseLeave={() => setHover(null)}
+            >
+              {s.text}
+              {on && hover?.side === side && <Why c={changes[s.change]} />}
+            </span>
+          );
+        })}
       </div>
     );
   };
@@ -57,16 +63,14 @@ export default function RewriteModal({
       <div className="modal diff" onClick={(e) => e.stopPropagation()}>
         <div>
           <div className="mhead">
-            <span className="mtitle">정책 적용</span>
+            <span className="mtitle">{readOnly ? '적용된 수정 내용' : '정책 적용'}</span>
             <div className="spacer" />
-            <button className="btn ghost sm" onClick={onCancel}>
-              ✕
-            </button>
+            <button className="btn ghost sm" onClick={onCancel}>✕</button>
           </div>
           <div className="note" style={{ marginTop: 6 }}>
             {blocked.length
               ? `차단된 정보: ${blocked.map(attrLabel).join(', ')}. 왼쪽은 작성하신 내용, 오른쪽은 시스템이 수정한 결과입니다. 강조된 문구에 마우스를 올리면 이유를 볼 수 있습니다.`
-              : '차단된 정보가 없어 대화가 그대로 유지됩니다.'}
+              : '차단된 정보가 없어 메시지가 그대로 유지됩니다.'}
           </div>
         </div>
 
@@ -75,7 +79,7 @@ export default function RewriteModal({
         {loading ? (
           <div className="diffloading">
             <span className="spin" />
-            <span className="note">대화를 수정하는 중…</span>
+            <span className="note">메시지를 수정하는 중…</span>
           </div>
         ) : (
           <>
@@ -90,45 +94,38 @@ export default function RewriteModal({
               </div>
             </div>
             <div className="diffscroll">
-              {base.map((t, i) => (
-                <div className="diffrow" key={i}>
-                  <div className="diffcell">{cell('l', t, i)}</div>
-                  <div className="diffcell">{cell('r', after[i] ?? t, i)}</div>
-                </div>
-              ))}
+              <div className="diffcols">
+                {pane('l', base)}
+                {pane('r', after)}
+              </div>
             </div>
           </>
         )}
 
         <div className="footerbar" style={{ marginTop: 0 }}>
           <span className="note" style={{ flex: 1, textAlign: 'left' }}>
-            적용한 뒤에도 각 메시지를 직접 수정할 수 있습니다.
+            적용한 뒤에도 메시지를 직접 고쳐 쓸 수 있습니다.
           </span>
-          <button className="btn ghost" onClick={onCancel}>
-            취소
-          </button>
-          <button className="btn primary" onClick={onApply} disabled={loading || !result}>
-            수정 적용
-          </button>
+          {readOnly ? (
+            <button className="btn primary" onClick={onCancel}>닫기</button>
+          ) : (
+            <>
+              <button className="btn ghost" onClick={onCancel}>취소</button>
+              <button className="btn primary" onClick={onApply} disabled={loading || !result}>
+                수정 적용
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-const STRATEGY: Record<string, string> = {
-  generalised: '일반화',
-  removed: '삭제',
-  ambiguity: '모호화',
-  other: '수정',
-};
-
 function Why({ c }: { c: Change }) {
   return (
     <span className="whytip" onClick={(e) => e.stopPropagation()}>
-      <span className="wh">
-        ✦ {attrLabel(c.attr)} · {STRATEGY[c.strategy] ?? c.strategy}
-      </span>
+      <span className="wh">✦ {attrLabel(c.attr)} · {STRATEGY[c.strategy] ?? c.strategy}</span>
       <span className="wb">{c.reason}</span>
     </span>
   );

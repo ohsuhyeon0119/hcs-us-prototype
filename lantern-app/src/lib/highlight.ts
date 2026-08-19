@@ -21,10 +21,8 @@ export function segment(text: string, marks: { text: string; change: number }[])
   return out.length ? out : [{ text }];
 }
 
-export const beforeMarks = (changes: Change[], turnIndex: number) =>
-  changes.map((c, i) => ({ ...c, i })).filter((c) => c.turnIndex === turnIndex && c.before)
-    .map((c) => ({ text: c.before, change: c.i }));
+export const beforeMarks = (changes: Change[]) =>
+  changes.map((c, i) => ({ text: c.before, change: i })).filter((m) => m.text);
 
-export const afterMarks = (changes: Change[], turnIndex: number) =>
-  changes.map((c, i) => ({ ...c, i })).filter((c) => c.turnIndex === turnIndex && c.after)
-    .map((c) => ({ text: c.after, change: c.i }));
+export const afterMarks = (changes: Change[]) =>
+  changes.map((c, i) => ({ text: c.after, change: i })).filter((m) => m.text);

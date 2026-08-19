@@ -26,10 +26,14 @@ Enforcement is **rewriting, not masking**. Blanking a phrase out would be nothin
 rewrite that keeps the message usable is the capability that justifies handing the job to the
 system.
 
-1. **Two versions of the conversation are kept.**
-   - *base* — the participant's own words. Manual edits overwrite it; rewrites never do.
-   - *applied* — the base after the current policy has been enforced. This is what Panel B shows
-     and what the simulator receives.
+0. **A scenario is a short fixed exchange plus one unsent message.** `preamble` is the
+   conversation that already happened and is read-only; `draft` is the long message the
+   participant is about to send. Editing a message you already sent is not a situation that
+   arises, so the draft is the only thing anyone — participant or system — can change.
+1. **Two versions of the draft are kept.**
+   - *base* — the participant's own words. Typing in the box overwrites it; rewrites never do.
+   - *applied* — the base after the current policy has been enforced. This is what the composer
+     shows and what the simulator receives.
 2. **Execute** (`/api/rewrite`) — changing Allow/Block leaves the conversation untouched and
    surfaces an **Execute** button under the policy rows. It always rewrites **from the base**,
    under the whole current policy:
@@ -43,7 +47,9 @@ system.
 3. **Preview** — a two-column diff scrolled as one: left is what the participant wrote with the
    flagged phrase highlighted, right is the rewrite with the replacement highlighted. Hovering
    either half of a pair explains what the phrase gave away and why the replacement still works.
-   Nothing is applied until **Apply rewrite**.
+   Nothing is applied until **수정 적용**. The composer itself carries no highlighting: what the
+   participant reads there is the message as it would actually be sent. The badge under it
+   reopens the diff for anyone who wants to see what moved.
 4. **Simulation** (`/api/simulate`) — two calls run in parallel on the applied conversation:
    *inference* (per attribute: inferable, value, verbatim cues) and *task* (the downstream output).
    A **conflict** is `policy = block` **and** `inferable = true`.

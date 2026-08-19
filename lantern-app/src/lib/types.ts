@@ -16,8 +16,8 @@ export type Policy = Record<string, Decision>;
 
 export type Turn = { role: 'user' | 'assistant'; text: string };
 
-/** A verbatim substring of turns[turnIndex].text that discloses `attr`. */
-export type Span = { attr: AttrKey; turnIndex: number; text: string };
+/** A verbatim substring of the draft that discloses `attr`. */
+export type Span = { attr: AttrKey; text: string };
 
 export type Scenario = {
   id: string;
@@ -27,7 +27,10 @@ export type Scenario = {
   aiTask: string;
   /** Attributes the researchers expect this scenario to expose (matrix column). */
   exposed: AttrKey[];
-  turns: Turn[];
+  /** The exchange that already happened. Read-only for the participant. */
+  preamble: Turn[];
+  /** The message not yet sent. This is the only thing the policy acts on. */
+  draft: string;
   spans: Span[];
   annotatedAt?: string;
   createdAt: string;
@@ -37,17 +40,16 @@ export type RewriteStrategy = 'generalised' | 'removed' | 'ambiguity' | 'other';
 
 /** One phrase the system rewrote because an attribute is blocked. */
 export type Change = {
-  turnIndex: number;
   attr: AttrKey;
   strategy: RewriteStrategy;
-  /** Exact substring of the base turn that was rewritten. */
+  /** Exact substring of the participant's own draft that was rewritten. */
   before: string;
-  /** Exact substring of the rewritten turn that replaced it ('' when deleted). */
+  /** Exact substring of the rewritten draft that replaced it ('' when deleted). */
   after: string;
   reason: string;
 };
 
-export type RewriteResult = { turns: Turn[]; changes: Change[] };
+export type RewriteResult = { draft: string; changes: Change[] };
 
 export type Inference = {
   attr: AttrKey;

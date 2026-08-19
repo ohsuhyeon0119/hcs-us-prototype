@@ -7,16 +7,17 @@ export const maxDuration = 180;
 
 export async function POST(req: Request) {
   try {
-    const { turns, recipient, purpose, aiTask } = (await req.json()) as {
-      turns: Turn[];
+    const { preamble, draft, recipient, purpose, aiTask } = (await req.json()) as {
+      preamble: Turn[];
+      draft: string;
       recipient: string;
       purpose: string;
       aiTask: string;
     };
-    // `turns` is already the policy-enforced conversation: what the AI receives.
+    // `draft` is already the policy-enforced message: what the assistant receives.
     const [inferences, output] = await Promise.all([
-      inferAttributes(turns),
-      runTask(turns, { recipient, purpose, aiTask }),
+      inferAttributes(preamble ?? [], draft),
+      runTask(preamble ?? [], draft, { recipient, purpose, aiTask }),
     ]);
     return NextResponse.json({ inferences, output, ranAt: new Date().toISOString() });
   } catch (e) {

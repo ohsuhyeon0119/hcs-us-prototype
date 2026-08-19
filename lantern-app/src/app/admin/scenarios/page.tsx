@@ -30,8 +30,10 @@ export default async function ScenariosPage() {
               <div className="sl">시나리오</div>
             </div>
             <div className="stat">
-              <div className="sn">{scenarios.reduce((n, s) => n + s.turns.length, 0)}</div>
-              <div className="sl">전체 대화 턴</div>
+              <div className="sn">
+                {scenarios.reduce((n, s) => n + (s.draft?.length ?? 0), 0)}
+              </div>
+              <div className="sl">전체 메시지 글자</div>
             </div>
             <div className="stat">
               <div className="sn">{scenarios.reduce((n, s) => n + (s.spans?.length ?? 0), 0)}</div>
@@ -60,7 +62,8 @@ function ScenarioCard({ s, index }: { s: Scenario; index: number }) {
         <div>
           <div className="scentitle">{s.title}</div>
           <div className="note mono">
-            {s.id} · {s.turns.length}턴 · 주석 {s.spans?.length ?? 0}개 · {fmt(s.annotatedAt)}
+            {s.id} · 사전 대화 {s.preamble?.length ?? 0}턴 · 메시지 {s.draft?.length ?? 0}자 · 주석{' '}
+            {s.spans?.length ?? 0}개 · {fmt(s.annotatedAt)}
           </div>
         </div>
       </div>
@@ -84,15 +87,22 @@ function ScenarioCard({ s, index }: { s: Scenario; index: number }) {
         )}
       </div>
 
-      <div className="section" style={{ margin: '20px 0 10px' }}>대화</div>
-      <div className="scroller">
-        <div className="thread">
-          {s.turns.map((t, i) => (
+      <div className="section" style={{ margin: '20px 0 10px' }}>이미 주고받은 대화 (고정)</div>
+      <div className="scroller" style={{ maxHeight: 200 }}>
+        <div className="transcript" style={{ padding: 0, border: 'none', maxHeight: 'none' }}>
+          {(s.preamble ?? []).map((t, i) => (
             <div className={`turn ${t.role === 'user' ? 'u' : 'a'}`} key={i}>
               <div className={`bubble ${t.role === 'user' ? 'u' : 'a'}`}>{t.text}</div>
             </div>
           ))}
         </div>
+      </div>
+
+      <div className="section" style={{ margin: '20px 0 10px' }}>
+        아직 보내지 않은 메시지 · 정책과 수정의 대상
+      </div>
+      <div className="scroller" style={{ whiteSpace: 'pre-wrap', fontSize: 14, lineHeight: 1.85 }}>
+        {s.draft}
       </div>
 
       <div className="section" style={{ margin: '20px 0 10px' }}>
@@ -105,9 +115,6 @@ function ScenarioCard({ s, index }: { s: Scenario; index: number }) {
           {s.spans.map((sp: Span, i: number) => (
             <div className="spanrow" key={i}>
               <span className="pill">{attrLabel(sp.attr)}</span>
-              <span className="mono" style={{ color: 'var(--ink3)' }}>
-                턴 {sp.turnIndex + 1}
-              </span>
               <span className="sptext">“{sp.text}”</span>
             </div>
           ))}
