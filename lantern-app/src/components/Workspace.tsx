@@ -262,7 +262,6 @@ export default function Workspace({
                 spellCheck={false}
               />
               <div className="composer-foot">
-                <span className="note">이 메시지는 아직 전송되지 않았습니다.</span>
                 <div className="spacer" />
                 <span className="note mono">{applied.length}자</span>
               </div>
