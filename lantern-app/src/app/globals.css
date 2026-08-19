@@ -287,9 +287,6 @@ textarea.draftbox{flex:1;min-height:0;width:100%;padding:16px;border-radius:11px
   border:1px solid var(--accent);font-size:14px;line-height:1.85;color:var(--ink);resize:none;outline:none}
 textarea.draftbox:focus{box-shadow:0 0 0 3px var(--accent-soft)}
 .composer-foot{display:flex;align-items:center;gap:8px}
-.appliedbadge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;
-  background:var(--accent-soft);color:var(--accent);border:none;font-size:11px;font-weight:600;cursor:pointer}
-.appliedbadge:hover{background:#DCE5FA}
 
 /* ---------- landing ---------- */
 .linkbtn{background:none;border:none;color:var(--ink3);font-size:13px;cursor:pointer;
@@ -297,3 +294,9 @@ textarea.draftbox:focus{box-shadow:0 0 0 3px var(--accent-soft)}
 .linkbtn:hover{color:var(--ink2)}
 .resumebox{width:320px;background:var(--surface);border:1px solid var(--border);
   border-radius:14px;padding:24px}
+
+/* ---------- panel C: two separate simulations ---------- */
+.simblock{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:12px;
+  background:var(--sunken);border:1px solid var(--border)}
+.simtitle{font-size:12px;font-weight:700;letter-spacing:.4px;color:var(--ink);
+  padding-bottom:10px;border-bottom:1px solid var(--border)}

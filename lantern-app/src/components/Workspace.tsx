@@ -8,12 +8,11 @@ import type {
 } from '@/lib/types';
 import type { Logger } from '@/lib/logger';
 
-type HistoryEntry = { round: string; text: string };
 const same = (a: Policy, b: Policy) => ATTR_KEYS.every((k) => a[k] === b[k]);
 const clip = (t: string, n = 34) => (t.length > n ? `${t.slice(0, n)}…` : t);
 
 export default function Workspace({
-  scenario, policy, setPolicy, draft, setDraft, history, pushHistory, logger, onFinish, restore,
+  scenario, policy, setPolicy, draft, setDraft, logger, onFinish, restore,
 }: {
   scenario: Scenario;
   policy: Policy;
@@ -21,8 +20,6 @@ export default function Workspace({
   /** The participant's own words. Rewrites are always derived from these. */
   draft: string;
   setDraft: (d: string) => void;
-  history: HistoryEntry[];
-  pushHistory: (e: HistoryEntry) => void;
   logger: Logger;
   onFinish: () => void;
   /** State rebuilt from the log when a session is resumed. */
@@ -43,7 +40,7 @@ export default function Workspace({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const [modal, setModal] = useState<null | 'approve' | 'review'>(null);
+  const [modal, setModal] = useState(false);
   const [preview, setPreview] = useState<RewriteResult | null>(null);
   const [previewing, setPreviewing] = useState(false);
   const [previewError, setPreviewError] = useState<string | null>(null);
@@ -87,7 +84,7 @@ export default function Workspace({
         attribute: k, attribute_label: attrLabel(k), from: appliedPolicy[k], to: policy[k],
       })),
     });
-    setModal('approve');
+    setModal(true);
     setPreview(null);
     setPreviewError(null);
     setPreviewing(true);
@@ -126,14 +123,8 @@ export default function Workspace({
     focusText.current = preview.draft;
     setChanges(preview.changes);
     setAppliedPolicy(policy);
-    setModal(null);
+    setModal(false);
     const byAttr = [...new Set(preview.changes.map((c) => attrLabel(c.attr)))];
-    pushHistory({
-      round: `R${round}`,
-      text: preview.changes.length
-        ? `수정 적용 · 문구 ${preview.changes.length}개 (${byAttr.join(', ')})`
-        : '정책 적용 · 수정할 문구 없음',
-    });
     logger.log('rewrite_apply',
       preview.changes.length
         ? `수정 적용 · 문구 ${preview.changes.length}개 (${byAttr.join(', ')})`
@@ -164,7 +155,6 @@ export default function Workspace({
       overrode_system_rewrite: overrode,
       dropped_changes: overrode ? changes : [],
     });
-    pushHistory({ round: `R${round}`, text: '메시지 직접 수정' });
   };
 
   /* ---------------- simulate ---------------- */
@@ -219,11 +209,6 @@ export default function Workspace({
           <span className="roundword">라운드</span>
           <span className="roundnum">{String(round).padStart(2, '0')}</span>
         </div>
-        <div className="pips">
-          {[1, 2, 3, 4].map((i) => (
-            <span key={i} className={`pip ${i < round ? 'past' : i === round ? 'on' : ''}`} />
-          ))}
-        </div>
         <div className="spacer" />
         <button className="btn ghost sm" onClick={onFinish}>이 설정으로 마치기</button>
       </div>
@@ -256,17 +241,6 @@ export default function Workspace({
               </div>
             )}
 
-            <div className="spacer" />
-            <div className="rule" />
-            <div className="section">변경 기록</div>
-            <div className="history">
-              {history.map((h, i) => (
-                <div className="hrow" key={i}>
-                  <span className="tag2">{h.round}</span>
-                  <span className="e">{h.text}</span>
-                </div>
-              ))}
-            </div>
           </div>
         </div>
 
@@ -288,13 +262,7 @@ export default function Workspace({
                 spellCheck={false}
               />
               <div className="composer-foot">
-                {changes.length > 0 ? (
-                  <button className="appliedbadge" onClick={() => setModal('review')}>
-                    ✦ 정책에 따라 {changes.length}개 문구 수정됨 · 변경 내용 보기
-                  </button>
-                ) : (
-                  <span className="note">이 메시지는 아직 전송되지 않았습니다.</span>
-                )}
+                <span className="note">이 메시지는 아직 전송되지 않았습니다.</span>
                 <div className="spacer" />
                 <span className="note mono">{applied.length}자</span>
               </div>
@@ -307,7 +275,7 @@ export default function Workspace({
           <div className="panelhead">
             <span className="t">C · 시뮬레이션</span>
             <div className="spacer" />
-            <span className="r">{result ? `추론 ${inferred.length}개` : ''}</span>
+
           </div>
           <div className="panelbody">
             {error && <div className="err">{error}</div>}
@@ -315,12 +283,13 @@ export default function Workspace({
               <div className="empty">
                 <div className="t">아직 시뮬레이션하지 않았습니다</div>
                 <button className="btn primary" onClick={simulate} disabled={busy}>
-                  {busy ? <span className="spin" /> : '시뮬레이션'}
+                  {busy ? <span className="spin" /> : '추론 & 작업 simulate'}
                 </button>
               </div>
             ) : (
               <>
-                <div className="section">추론된 정보</div>
+                <div className="simblock">
+                  <div className="simtitle">추론 시뮬레이션</div>
                 {inferred.length === 0 ? (
                   <div className="outcard" style={{ alignItems: 'center', padding: 26 }}>
                     <span style={{ fontWeight: 600, color: 'var(--ink3)' }}>추론된 정보 없음</span>
@@ -341,19 +310,23 @@ export default function Workspace({
                     </div>
                   ))
                 )}
-                <div className="rule" />
-                <div className="section">AI 작업 결과</div>
-                <div className="outcard">
-                  <div className="head">
-                    <span className="title">현재 메시지 기준 결과</span>
-                    <div className="spacer" />
-                    <span className="tag">R{round}</span>
-                  </div>
-                  <div className="body">{result.output}</div>
                 </div>
+
+                <div className="simblock">
+                  <div className="simtitle">작업 시뮬레이션</div>
+                  <div className="outcard">
+                    <div className="head">
+                      <span className="title">현재 메시지 기준 결과</span>
+                      <div className="spacer" />
+                      <span className="tag">R{round}</span>
+                    </div>
+                    <div className="body">{result.output}</div>
+                  </div>
+                </div>
+
                 <div className="spacer" />
                 <button className="btn ghost" onClick={simulate} disabled={busy}>
-                  {busy ? <span className="spin" /> : '다시 시뮬레이션'}
+                  {busy ? <span className="spin" /> : '추론 & 작업 simulate'}
                 </button>
               </>
             )}
@@ -363,22 +336,19 @@ export default function Workspace({
 
       {modal && (
         <RewriteModal
-          base={modal === 'review' ? draft : draft}
-          result={modal === 'review' ? { draft: applied, changes } : preview}
-          loading={modal === 'approve' && previewing}
-          error={modal === 'approve' ? previewError : null}
-          blocked={modal === 'review' ? ATTR_KEYS.filter((k) => appliedPolicy[k] === 'block') : blocked}
-          readOnly={modal === 'review'}
+          base={draft}
+          result={preview}
+          loading={previewing}
+          error={previewError}
+          blocked={blocked}
           onApply={applyRewrite}
           onCancel={() => {
-            if (modal === 'approve') {
-              logger.log('rewrite_cancel', `수정 취소 · 문구 ${preview?.changes.length ?? 0}개 폐기`, {
-                policy,
-                discarded_changes: preview?.changes ?? [],
-                policy_still_pending: pending,
-              });
-            }
-            setModal(null);
+            logger.log('rewrite_cancel', `수정 취소 · 문구 ${preview?.changes.length ?? 0}개 폐기`, {
+              policy,
+              discarded_changes: preview?.changes ?? [],
+              policy_still_pending: pending,
+            });
+            setModal(false);
           }}
         />
       )}

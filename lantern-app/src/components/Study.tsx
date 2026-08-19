@@ -17,7 +17,6 @@ const STEP_KO: Record<Step, string> = {
   reflection: '회고',
   done: '완료 화면',
 };
-type HistoryEntry = { round: string; text: string };
 
 const AGE = ['19–24세', '25–29세', '30–34세', '35–39세', '40세 이상', '응답하지 않음'];
 const GENDER = ['여성', '남성', '논바이너리', '직접 기술', '응답하지 않음'];
@@ -43,7 +42,6 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
   const [draft, setDraft] = useState('');
   const restore = useRef<ResumeState | null>(null);
   const [noSession, setNoSession] = useState(false);
-  const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [stopReason, setStopReason] = useState('');
   const [stopText, setStopText] = useState('');
 
@@ -90,7 +88,6 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
         setSi(state.scenarioIndex);
         setPolicy(state.policy ?? {});
         setDraft(state.baseDraft ?? '');
-        setHistory(state.history ?? []);
         if (state.step === 'workspace' || state.step === 'reflection') {
           lg.setContext({
             scenarioId: scenarios[state.scenarioIndex]?.id,
@@ -143,7 +140,6 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
     loggerRef.current?.setContext({ scenarioId: s.id, scenarioIndex: index, round: 0 });
     setPolicy(Object.fromEntries(ATTR_KEYS.map((k) => [k, 'allow'])) as Policy);
     setDraft(s.draft);
-    setHistory([]);
     setStopReason('');
     setStopText('');
     setSi(index);
@@ -254,7 +250,6 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
               onClick={() => {
                 const init = Object.fromEntries(ATTR_KEYS.map((k) => [k, 'allow'])) as Policy;
                 setPolicy(init);
-                setHistory([{ round: 'INIT', text: '전체 허용' }]);
                 log('scenario_start', `시나리오 ${si + 1} 시작 · 초기 정책 전체 허용`, {
                   scenario_title: scenario.title,
                   recipient: scenario.recipient,
@@ -295,8 +290,6 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
           setPolicy={setPolicy}
           draft={draft}
           setDraft={setDraft}
-          history={history}
-          pushHistory={(e) => setHistory((h) => [...h, e])}
           logger={loggerRef.current!}
           onFinish={() => {
             log('finish_click', '이 설정으로 마치기 클릭', { policy });
