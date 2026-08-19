@@ -1,11 +1,21 @@
 'use client';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import Workspace from './Workspace';
 import { ATTR_KEYS, attrLabel } from '@/lib/types';
 import { createLogger } from '@/lib/logger';
+import type { Logger } from '@/lib/logger';
+import type { ActionType } from '@/lib/types';
 import type { Policy, Scenario, Turn } from '@/lib/types';
 
 type Step = 'demographics' | 'scenario' | 'workspace' | 'reflection' | 'done';
+
+const STEP_KO: Record<Step, string> = {
+  demographics: '기본 정보 설문',
+  scenario: '시나리오 소개',
+  workspace: '워크스페이스',
+  reflection: '회고',
+  done: '완료 화면',
+};
 type HistoryEntry = { round: string; text: string };
 
 const AGE = ['19–24세', '25–29세', '30–34세', '35–39세', '40세 이상', '응답하지 않음'];
@@ -22,7 +32,7 @@ const STOP_REASONS = [
 ];
 
 export default function Study({ scenarios }: { scenarios: Scenario[] }) {
-  const [pid] = useState(() => `P${Date.now().toString(36).slice(-6).toUpperCase()}`);
+  const [pid, setPid] = useState<string | null>(null);
   const [step, setStep] = useState<Step>('demographics');
   const [si, setSi] = useState(0);
 
@@ -36,16 +46,76 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
 
   const scenario = scenarios[si];
 
-  const logger = useMemo(() => createLogger(pid), [pid]);
-  const started = useRef(false);
-  if (!started.current) {
-    started.current = true;
-    logger.log('session_start', '세션 시작', { scenario_count: scenarios.length });
-  }
+  const loggerRef = useRef<Logger | null>(null);
+  const finished = useRef(false);
+  const where = useRef<{ step: Step; si: number; policy: Policy }>({
+    step: 'demographics',
+    si: 0,
+    policy: {},
+  });
+
+  // The session id lives in sessionStorage, so a reload continues the same log
+  // instead of forking a new participant. Started here rather than during
+  // render: a render also runs on the server, which was creating a throwaway
+  // session on every page load.
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      const KEY = 'lantern.participant';
+      let id = sessionStorage.getItem(KEY);
+      const resumed = Boolean(id);
+      if (!id) {
+        id = `P${Date.now().toString(36).slice(-6).toUpperCase()}`;
+        sessionStorage.setItem(KEY, id);
+      }
+      let startSeq = 0;
+      if (resumed) {
+        try {
+          const d = await (await fetch(`/api/log?participantId=${id}`)).json();
+          startSeq = Math.max(0, ...(d.events ?? []).map((e: { seq: number }) => e.seq));
+        } catch {
+          /* start from zero */
+        }
+      }
+      if (cancelled) return;
+      const lg = createLogger(id, startSeq);
+      loggerRef.current = lg;
+      setPid(id);
+      void lg.log(
+        resumed ? 'session_resume' : 'session_start',
+        resumed ? '세션 재진입 · 페이지 새로고침' : '세션 시작',
+        { scenario_count: scenarios.length, resumed_from_seq: startSeq || undefined },
+      );
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [scenarios.length]);
+
+  // Leaving mid-session is recorded, so an abandoned run is distinguishable
+  // from one that merely stopped being logged.
+  useEffect(() => {
+    const onHide = () => {
+      if (finished.current) return;
+      const w = where.current;
+      void loggerRef.current?.log('session_abandon', `중간 이탈 · ${STEP_KO[w.step]}`, {
+        step: w.step,
+        scenario_index: w.si,
+        policy_at_exit: w.policy,
+      });
+    };
+    window.addEventListener('pagehide', onHide);
+    return () => window.removeEventListener('pagehide', onHide);
+  }, []);
+
+  where.current = { step, si, policy };
+
+  const log = (action: ActionType, label: string, detail: Record<string, unknown> = {}) =>
+    loggerRef.current?.log(action, label, detail) ?? Promise.resolve();
 
   const startScenario = (index: number) => {
     const s = scenarios[index];
-    logger.setContext({ scenarioId: s.id, scenarioIndex: index, round: 0 });
+    loggerRef.current?.setContext({ scenarioId: s.id, scenarioIndex: index, round: 0 });
     setPolicy(Object.fromEntries(ATTR_KEYS.map((k) => [k, 'allow'])) as Policy);
     setTurns(s.turns);
     setHistory([]);
@@ -56,6 +126,15 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
   };
 
   /* ------------------------------------------------------------------ */
+
+  if (!pid)
+    return (
+      <Shell>
+        <div className="card" style={{ textAlign: 'center' }}>
+          <span className="spin" />
+        </div>
+      </Shell>
+    );
 
   if (scenarios.length === 0)
     return (
@@ -97,7 +176,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
               className="btn primary"
               disabled={Object.keys(demo).length < 4}
               onClick={() => {
-                logger.log('demographics_submit', '기본 정보 설문 제출', { answers: demo });
+                log('demographics_submit', '기본 정보 설문 제출', { answers: demo });
                 startScenario(0);
               }}
             >
@@ -138,7 +217,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
                 const init = Object.fromEntries(ATTR_KEYS.map((k) => [k, 'allow'])) as Policy;
                 setPolicy(init);
                 setHistory([{ round: 'INIT', text: '전체 허용' }]);
-                logger.log('scenario_start', `시나리오 ${si + 1} 시작 · 초기 정책 전체 허용`, {
+                log('scenario_start', `시나리오 ${si + 1} 시작 · 초기 정책 전체 허용`, {
                   scenario_title: scenario.title,
                   recipient: scenario.recipient,
                   purpose: scenario.purpose,
@@ -168,9 +247,9 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
           setTurns={setTurns}
           history={history}
           pushHistory={(e) => setHistory((h) => [...h, e])}
-          logger={logger}
+          logger={loggerRef.current!}
           onFinish={() => {
-            logger.log('finish_click', '이 설정으로 마치기 클릭', { policy });
+            log('finish_click', '이 설정으로 마치기 클릭', { policy });
             setStep('reflection');
           }}
         />
@@ -213,7 +292,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
               className="btn primary"
               disabled={!stopReason}
               onClick={async () => {
-                await logger.log('reflection_submit', `회고 제출 · ${stopReason}`, {
+                await log('reflection_submit', `회고 제출 · ${stopReason}`, {
                   stop_reason: stopReason,
                   explanation: stopText,
                   final_policy: policy,
@@ -222,10 +301,12 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
                   ).join(' · '),
                   final_turns: turns,
                 });
-                await logger.log('scenario_end', `시나리오 ${si + 1} 종료`, {});
+                await log('scenario_end', `시나리오 ${si + 1} 종료`, {});
                 if (si + 1 < scenarios.length) startScenario(si + 1);
                 else {
-                  await logger.log('session_end', '세션 종료', {});
+                  finished.current = true;
+                  await log('session_end', '세션 종료', {});
+                  sessionStorage.removeItem('lantern.participant');
                   setStep('done');
                 }
               }}

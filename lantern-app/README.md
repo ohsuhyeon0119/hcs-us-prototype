@@ -69,6 +69,11 @@ explicitly; it no longer drives the participant UI.
   }
   ```
 
+  A session id is held in `sessionStorage`, so reloading the page continues the same log rather
+  than starting a second participant, and `seq` resumes from where it left off. Leaving mid-session
+  writes a `session_abandon` record naming the step the participant was on, so an abandoned run is
+  distinguishable from one that merely stopped being logged; `/admin/sessions` shows it as 이탈.
+
   `seq` is monotonic per session, so the history replays in order without trusting clocks.
   Every action is recorded — `policy_toggle`, `execute_click`, `rewrite_preview`, `rewrite_apply`,
   `rewrite_cancel`, `content_edit_open/save/cancel`, `simulate_click`, `simulate_result`,

@@ -66,6 +66,8 @@ export type SimulationResult = {
 
 export type ActionType =
   | 'session_start'
+  | 'session_resume'
+  | 'session_abandon'
   | 'demographics_submit'
   | 'scenario_start'
   | 'policy_toggle'

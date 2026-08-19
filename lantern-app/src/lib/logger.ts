@@ -8,8 +8,8 @@ export type Logger = ReturnType<typeof createLogger>;
  * same context (who, which scenario, which round) and a running sequence
  * number — the log can then be replayed in order without trusting timestamps.
  */
-export function createLogger(participantId: string) {
-  let seq = 0;
+export function createLogger(participantId: string, startSeq = 0) {
+  let seq = startSeq;
   let ctx: { scenarioId?: string; scenarioIndex?: number; round: number } = { round: 0 };
 
   const setContext = (c: Partial<typeof ctx>) => {

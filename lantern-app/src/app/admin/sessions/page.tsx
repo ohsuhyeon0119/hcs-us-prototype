@@ -24,6 +24,8 @@ const DEMO_Q: [string, string][] = [
 
 const ACTION_KO: Record<ActionType, string> = {
   session_start: '세션 시작',
+  session_resume: '세션 재진입',
+  session_abandon: '중간 이탈',
   demographics_submit: '설문 제출',
   scenario_start: '시나리오 시작',
   policy_toggle: '정책 변경',
@@ -55,6 +57,8 @@ const TONE: Partial<Record<ActionType, string>> = {
   simulate_click: 'act-sim',
   simulate_result: 'act-sim',
   simulate_error: 'act-err',
+  session_abandon: 'act-err',
+  session_resume: 'act-muted',
   reflection_submit: 'act-ink',
 };
 
@@ -165,7 +169,16 @@ export default function Sessions() {
                   <Stat n={scenarioIds.length} l="시나리오" />
                   <Stat n={summary?.revisions ?? 0} l="수정" />
                   <Stat n={summary?.simulations ?? 0} l="시뮬레이션" />
-                  <Stat n={summary?.completed ? '완료' : '중단'} l="상태" />
+                  <Stat
+                    n={
+                      summary?.completed
+                        ? '완료'
+                        : events.some((e) => e.action === 'session_abandon')
+                          ? '이탈'
+                          : '진행 중'
+                    }
+                    l="상태"
+                  />
                 </div>
 
                 <div className="section" style={{ margin: '20px 0 10px' }}>설문 응답</div>
