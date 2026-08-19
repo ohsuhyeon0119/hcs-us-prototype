@@ -84,8 +84,7 @@ h2.title{font-size:22px;font-weight:700;line-height:1.45;margin:0 0 22px}
 .turn.u:hover .editbtn{opacity:1}
 
 /* ---------- inference cards ---------- */
-.infcard{border:1px solid var(--border);border-radius:10px;background:var(--surface);padding:12px 14px;display:flex;flex-direction:column;gap:8px}
-.infval{font-size:13px;line-height:1.6;color:var(--ink2)}
+
 .infcard .top{display:flex;align-items:center;gap:8px}
 .infcard .name{font-size:15px;font-weight:600}
 .badge{padding:4px 9px;border-radius:99px;font-size:11px;font-weight:600;background:var(--ok-soft);color:var(--ok)}
@@ -296,7 +295,29 @@ textarea.draftbox:focus{box-shadow:0 0 0 3px var(--accent-soft)}
   border-radius:14px;padding:24px}
 
 /* ---------- panel C: two separate simulations ---------- */
-.simblock{display:flex;flex-direction:column;gap:10px;padding:16px;border-radius:12px;
-  background:var(--sunken);border:1px solid var(--border)}
-.simtitle{font-size:12px;font-weight:700;letter-spacing:.4px;color:var(--ink);
-  padding-bottom:10px;border-bottom:1px solid var(--border)}
+
+/* ---------- panel C ---------- */
+.simscroll{flex:1;min-height:0;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:12px}
+.simfoot{flex:none;padding:14px 16px;border-top:1px solid var(--border);background:var(--surface)}
+.simfoot .btn{width:100%}
+.simempty{flex:1;display:flex;align-items:center;justify-content:center;color:var(--ink3);font-size:14px}
+.simnone{color:var(--ink3);font-size:13px;padding:4px 2px}
+
+.simsec{border:1px solid var(--border);border-radius:12px;background:var(--surface);overflow:hidden}
+.simsec-head{width:100%;display:flex;align-items:center;gap:8px;padding:13px 15px;background:var(--sunken);
+  border:none;border-bottom:1px solid transparent;cursor:pointer;text-align:left}
+.simsec.open .simsec-head{border-bottom-color:var(--border)}
+.simsec-head:hover{background:#EFF1F5}
+.simsec-title{font-size:12.5px;font-weight:700;letter-spacing:.3px;color:var(--ink)}
+.simsec-chev{font-size:13px;color:var(--ink3);transform:rotate(-90deg);transition:transform .15s}
+.simsec.open .simsec-chev{transform:rotate(0deg)}
+.simsec-body{padding:14px 15px}
+
+.inflist{display:flex;flex-direction:column;gap:10px}
+.infcard{border:1px solid var(--border);border-radius:9px;padding:12px 14px;background:var(--surface)}
+.infcard .name{font-size:11px;font-weight:700;letter-spacing:.6px;color:var(--ink3)}
+.infval{font-size:14px;line-height:1.6;margin-top:5px;color:var(--ink)}
+.infcard .cue{margin-top:11px;padding:0 0 0 11px;border-left:2px solid var(--border);background:none;border-radius:0}
+.infcard .cue .k{font-size:10.5px;color:var(--ink3)}
+.infcard .cue .q{font-size:12.5px;line-height:1.55;color:var(--ink2);margin-top:3px}
+.taskout{font-size:13.5px;line-height:1.8;white-space:pre-wrap;color:var(--ink)}

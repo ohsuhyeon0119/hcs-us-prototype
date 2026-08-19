@@ -38,6 +38,8 @@ export default function Workspace({
   const [round, setRound] = useState(restore?.round ?? 0);
   const [result, setResult] = useState<SimulationResult | null>(restore?.result ?? null);
   const [busy, setBusy] = useState(false);
+  const [openInf, setOpenInf] = useState(true);
+  const [openTask, setOpenTask] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const [modal, setModal] = useState(false);
@@ -210,7 +212,7 @@ export default function Workspace({
           <span className="roundnum">{String(round).padStart(2, '0')}</span>
         </div>
         <div className="spacer" />
-        <button className="btn ghost sm" onClick={onFinish}>이 설정으로 마치기</button>
+        <button className="btn primary sm" onClick={onFinish}>마치겠습니다</button>
       </div>
 
       <div className="panels">
@@ -271,64 +273,48 @@ export default function Workspace({
 
         {/* ---------------- Panel C ---------------- */}
         <div className="panel c">
-          <div className="panelhead">
-            <span className="t">C · 시뮬레이션</span>
-            <div className="spacer" />
-
-          </div>
-          <div className="panelbody">
-            {error && <div className="err">{error}</div>}
-            {!result ? (
-              <div className="empty">
-                <div className="t">아직 시뮬레이션하지 않았습니다</div>
-                <button className="btn primary" onClick={simulate} disabled={busy}>
-                  {busy ? <span className="spin" /> : '추론 & 작업 simulate'}
-                </button>
-              </div>
-            ) : (
-              <>
-                <div className="simblock">
-                  <div className="simtitle">추론 시뮬레이션</div>
-                {inferred.length === 0 ? (
-                  <div className="outcard" style={{ alignItems: 'center', padding: 26 }}>
-                    <span style={{ fontWeight: 600, color: 'var(--ink3)' }}>추론된 정보 없음</span>
-                  </div>
-                ) : (
-                  inferred.map((c) => (
-                    <div className="infcard" key={c.attr}>
-                      <div className="top"><span className="name">{attrLabel(c.attr)}</span></div>
-                      {c.value && <div className="infval">{c.value}</div>}
-                      <div className="cue">
-                        <div className="k">
-                          {c.cues.length ? '추론 근거가 된 표현' : '직접적인 표현 없음 — 맥락으로 추론됨'}
-                        </div>
-                        <div className="q">
-                          {c.cues.length ? c.cues.map((q) => `“${q}”`).join(', ') : c.reasoning}
-                        </div>
+          <div className="panelhead"><span className="t">C · 시뮬레이션</span></div>
+          <div className="panelbody nopad">
+            <div className="simscroll">
+              {error && <div className="err">{error}</div>}
+              {!result ? (
+                <div className="simempty">아직 시뮬레이션하지 않았습니다</div>
+              ) : (
+                <>
+                  <Section title="추론 시뮬레이션" open={openInf} onToggle={() => setOpenInf(!openInf)}>
+                    {inferred.length === 0 ? (
+                      <div className="simnone">추론된 정보 없음</div>
+                    ) : (
+                      <div className="inflist">
+                        {inferred.map((c) => (
+                          <div className="infcard" key={c.attr}>
+                            <div className="name">{attrLabel(c.attr)}</div>
+                            {c.value && <div className="infval">{c.value}</div>}
+                            <div className="cue">
+                              <div className="k">
+                                {c.cues.length ? '추론 근거가 된 표현' : '직접적인 표현 없음 — 맥락으로 추론됨'}
+                              </div>
+                              <div className="q">
+                                {c.cues.length ? c.cues.map((q) => `“${q}”`).join(', ') : c.reasoning}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
                       </div>
-                    </div>
-                  ))
-                )}
-                </div>
+                    )}
+                  </Section>
 
-                <div className="simblock">
-                  <div className="simtitle">작업 시뮬레이션</div>
-                  <div className="outcard">
-                    <div className="head">
-                      <span className="title">현재 메시지 기준 결과</span>
-                      <div className="spacer" />
-                      <span className="tag">R{round}</span>
-                    </div>
-                    <div className="body">{result.output}</div>
-                  </div>
-                </div>
-
-                <div className="spacer" />
-                <button className="btn ghost" onClick={simulate} disabled={busy}>
-                  {busy ? <span className="spin" /> : '추론 & 작업 simulate'}
-                </button>
-              </>
-            )}
+                  <Section title="작업 시뮬레이션" open={openTask} onToggle={() => setOpenTask(!openTask)}>
+                    <div className="taskout">{result.output}</div>
+                  </Section>
+                </>
+              )}
+            </div>
+            <div className="simfoot">
+              <button className="btn primary" onClick={simulate} disabled={busy}>
+                {busy ? <span className="spin" /> : '추론 & 작업 simulate'}
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -352,6 +338,26 @@ export default function Workspace({
         />
       )}
     </>
+  );
+}
+
+function Section({
+  title, open, onToggle, children,
+}: {
+  title: string;
+  open: boolean;
+  onToggle: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <div className={`simsec ${open ? 'open' : ''}`}>
+      <button className="simsec-head" onClick={onToggle}>
+        <span className="simsec-title">{title}</span>
+        <span className="spacer" />
+        <span className="simsec-chev">⌄</span>
+      </button>
+      {open && <div className="simsec-body">{children}</div>}
+    </div>
   );
 }
 
