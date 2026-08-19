@@ -13,7 +13,7 @@ const same = (a: Policy, b: Policy) => ATTR_KEYS.every((k) => a[k] === b[k]);
 const clip = (t: string, n = 34) => (t.length > n ? `${t.slice(0, n)}…` : t);
 
 export default function Workspace({
-  scenario, policy, setPolicy, draft, setDraft, history, pushHistory, logger, onFinish,
+  scenario, policy, setPolicy, draft, setDraft, history, pushHistory, logger, onFinish, restore,
 }: {
   scenario: Scenario;
   policy: Policy;
@@ -25,13 +25,21 @@ export default function Workspace({
   pushHistory: (e: HistoryEntry) => void;
   logger: Logger;
   onFinish: () => void;
+  /** State rebuilt from the log when a session is resumed. */
+  restore?: {
+    appliedDraft: string;
+    changes: Change[];
+    appliedPolicy: Policy;
+    round: number;
+    result: SimulationResult | null;
+  };
 }) {
-  const [applied, setApplied] = useState(draft);
-  const [changes, setChanges] = useState<Change[]>([]);
-  const [appliedPolicy, setAppliedPolicy] = useState<Policy>(policy);
+  const [applied, setApplied] = useState(restore?.appliedDraft ?? draft);
+  const [changes, setChanges] = useState<Change[]>(restore?.changes ?? []);
+  const [appliedPolicy, setAppliedPolicy] = useState<Policy>(restore?.appliedPolicy ?? policy);
 
-  const [round, setRound] = useState(0);
-  const [result, setResult] = useState<SimulationResult | null>(null);
+  const [round, setRound] = useState(restore?.round ?? 0);
+  const [result, setResult] = useState<SimulationResult | null>(restore?.result ?? null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 

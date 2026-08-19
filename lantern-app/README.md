@@ -75,8 +75,16 @@ explicitly; it no longer drives the participant UI.
   }
   ```
 
-  A session id is held in `sessionStorage`, so reloading the page continues the same log rather
-  than starting a second participant, and `seq` resumes from where it left off. Leaving mid-session
+  A session begins when **시작하기** is pressed on the landing page — that is what mints the
+  participant id, which is then shown in the top bar throughout. Opening `/study` without one
+  refuses to start. The id is held in `sessionStorage`, so reloading continues the same log rather
+  than starting a second participant, and `seq` resumes from where it left off.
+
+  A participant who leaves can be put back where they were by typing their id under
+  **이전에 하던 세션 이어서 하기**. Nothing extra is persisted for this: `/api/resume` replays the
+  log itself (`src/lib/replay.ts`) to rebuild the step, scenario, policy, both versions of the
+  draft, the applied rewrites, the round and the last simulation. If an action is not in the log
+  it did not happen, so the replay and the analysis can never disagree. Leaving mid-session
   writes a `session_abandon` record naming the step the participant was on, so an abandoned run is
   distinguishable from one that merely stopped being logged; `/admin/sessions` shows it as 이탈.
 

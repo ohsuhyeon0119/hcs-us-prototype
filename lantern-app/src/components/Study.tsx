@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import Workspace from './Workspace';
 import { ATTR_KEYS, attrLabel } from '@/lib/types';
 import { createLogger } from '@/lib/logger';
+import type { ResumeState } from '@/lib/replay';
 import type { Logger } from '@/lib/logger';
 import type { ActionType } from '@/lib/types';
 import type { Policy, Scenario } from '@/lib/types';
@@ -40,6 +41,8 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
 
   const [policy, setPolicy] = useState<Policy>({});
   const [draft, setDraft] = useState('');
+  const restore = useRef<ResumeState | null>(null);
+  const [noSession, setNoSession] = useState(false);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [stopReason, setStopReason] = useState('');
   const [stopText, setStopText] = useState('');
@@ -62,35 +65,56 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
     let cancelled = false;
     void (async () => {
       const KEY = 'lantern.participant';
-      let id = sessionStorage.getItem(KEY);
-      const resumed = Boolean(id);
+      const id = sessionStorage.getItem(KEY);
+      // A session begins when 시작하기 is pressed, which is what mints the id.
       if (!id) {
-        id = `P${Date.now().toString(36).slice(-6).toUpperCase()}`;
-        sessionStorage.setItem(KEY, id);
+        setNoSession(true);
+        return;
       }
-      let startSeq = 0;
-      if (resumed) {
-        try {
-          const d = await (await fetch(`/api/log?participantId=${id}`)).json();
-          startSeq = Math.max(0, ...(d.events ?? []).map((e: { seq: number }) => e.seq));
-        } catch {
-          /* start from zero */
-        }
+
+      let state: ResumeState | null = null;
+      try {
+        state = (await (await fetch(`/api/resume?participantId=${id}`)).json()) as ResumeState;
+      } catch {
+        /* treat as fresh */
       }
       if (cancelled) return;
-      const lg = createLogger(id, startSeq);
+
+      const lg = createLogger(id, state?.lastSeq ?? 0);
       loggerRef.current = lg;
       setPid(id);
-      void lg.log(
-        resumed ? 'session_resume' : 'session_start',
-        resumed ? '세션 재진입 · 페이지 새로고침' : '세션 시작',
-        { scenario_count: scenarios.length, resumed_from_seq: startSeq || undefined },
-      );
+
+      if (state?.found && !state.completed) {
+        restore.current = state;
+        setDemo(state.demographics ?? {});
+        setSi(state.scenarioIndex);
+        setPolicy(state.policy ?? {});
+        setDraft(state.baseDraft ?? '');
+        setHistory(state.history ?? []);
+        if (state.step === 'workspace' || state.step === 'reflection') {
+          lg.setContext({
+            scenarioId: scenarios[state.scenarioIndex]?.id,
+            scenarioIndex: state.scenarioIndex,
+            round: state.round,
+          });
+        }
+        setStep(state.scenarioIndex >= scenarios.length ? 'done' : state.step);
+        void lg.log('session_resume', `세션 이어서 시작 · ${STEP_KO[state.step]}부터`, {
+          resumed_from_seq: state.lastSeq,
+          last_event_at: state.lastAt,
+          step: state.step,
+          scenario_index: state.scenarioIndex,
+          round: state.round,
+          previously_abandoned: state.abandoned,
+        });
+      } else {
+        void lg.log('session_start', '세션 시작', { scenario_count: scenarios.length });
+      }
     })();
     return () => {
       cancelled = true;
     };
-  }, [scenarios.length]);
+  }, [scenarios]);
 
   // Leaving mid-session is recorded, so an abandoned run is distinguishable
   // from one that merely stopped being logged.
@@ -114,6 +138,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
     loggerRef.current?.log(action, label, detail) ?? Promise.resolve();
 
   const startScenario = (index: number) => {
+    restore.current = null;
     const s = scenarios[index];
     loggerRef.current?.setContext({ scenarioId: s.id, scenarioIndex: index, round: 0 });
     setPolicy(Object.fromEntries(ATTR_KEYS.map((k) => [k, 'allow'])) as Policy);
@@ -127,9 +152,22 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
 
   /* ------------------------------------------------------------------ */
 
+  if (noSession)
+    return (
+      <Shell pid={pid ?? undefined}>
+        <div className="card" style={{ textAlign: 'center' }}>
+          <h1 className="title" style={{ marginBottom: 18 }}>세션이 시작되지 않았습니다</h1>
+          <p className="note" style={{ marginBottom: 22 }}>
+            첫 화면에서 <b>시작하기</b>를 눌러야 세션이 만들어집니다.
+          </p>
+          <a className="btn primary" href="/">첫 화면으로</a>
+        </div>
+      </Shell>
+    );
+
   if (!pid)
     return (
-      <Shell>
+      <Shell pid={pid ?? undefined}>
         <div className="card" style={{ textAlign: 'center' }}>
           <span className="spin" />
         </div>
@@ -138,7 +176,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
 
   if (scenarios.length === 0)
     return (
-      <Shell>
+      <Shell pid={pid ?? undefined}>
         <div className="card">
           <h1 className="title">등록된 시나리오가 없습니다</h1>
           <p className="note">
@@ -151,7 +189,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
 
   if (step === 'demographics')
     return (
-      <Shell>
+      <Shell pid={pid ?? undefined}>
         <div className="card">
           <div className="eyebrow">참가자 {pid}</div>
           <h1 className="title">기본 정보</h1>
@@ -189,7 +227,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
 
   if (step === 'scenario')
     return (
-      <Shell>
+      <Shell pid={pid ?? undefined}>
         <div className="card">
           <div className="eyebrow">
             시나리오 {si + 1} / {scenarios.length}
@@ -238,10 +276,21 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
   if (step === 'workspace')
     return (
       <>
-        <TopBar pid={pid} right={`Scenario ${si + 1} / ${scenarios.length}`} />
+        <TopBar pid={pid ?? undefined} right={`시나리오 ${si + 1} / ${scenarios.length}`} />
         <Workspace
           key={scenario.id}
           scenario={scenario}
+          restore={
+            restore.current && restore.current.scenarioIndex === si
+              ? {
+                  appliedDraft: restore.current.appliedDraft,
+                  changes: restore.current.changes,
+                  appliedPolicy: restore.current.appliedPolicy,
+                  round: restore.current.round,
+                  result: restore.current.result,
+                }
+              : undefined
+          }
           policy={policy}
           setPolicy={setPolicy}
           draft={draft}
@@ -259,7 +308,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
 
   if (step === 'reflection')
     return (
-      <Shell pid={pid}>
+      <Shell pid={pid ?? undefined}>
         <div className="card">
           <div className="eyebrow">
             회고 · 시나리오 {si + 1} / {scenarios.length}
@@ -320,7 +369,7 @@ export default function Study({ scenarios }: { scenarios: Scenario[] }) {
     );
 
   return (
-    <Shell pid={pid}>
+    <Shell pid={pid ?? undefined}>
       <div className="card">
         <h1 className="title">감사합니다 — 세션이 끝났습니다.</h1>
         <p className="note">
